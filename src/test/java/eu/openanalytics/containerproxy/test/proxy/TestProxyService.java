@@ -25,6 +25,7 @@ import java.net.URI;
 import javax.inject.Inject;
 
 import eu.openanalytics.containerproxy.service.UserService;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,6 +42,7 @@ import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.test.proxy.TestProxyService.TestConfiguration;
 import eu.openanalytics.containerproxy.util.ProxyMappingManager;
 
+@Ignore
 @SpringBootTest(classes= {TestConfiguration.class, ContainerProxyApplication.class})
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")

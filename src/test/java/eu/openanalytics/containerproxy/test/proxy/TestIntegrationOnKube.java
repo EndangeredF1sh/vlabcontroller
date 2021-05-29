@@ -32,6 +32,7 @@ import eu.openanalytics.containerproxy.test.proxy.TestIntegrationOnKube.TestConf
 import eu.openanalytics.containerproxy.util.ProxyMappingManager;
 import io.fabric8.kubernetes.api.model.*;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.springframework.beans.BeansException;
@@ -71,6 +72,8 @@ import static org.junit.Assert.*;
  * - Arquillian will find you Kube config automatically
  * 4. Done. All used resources should be gone in minikube.
  */
+
+@Ignore
 @SpringBootTest(classes = {TestConfiguration.class, ContainerProxyApplication.class})
 @ContextConfiguration(initializers = PropertyOverrideContextInitializer.class)
 @ActiveProfiles("test")

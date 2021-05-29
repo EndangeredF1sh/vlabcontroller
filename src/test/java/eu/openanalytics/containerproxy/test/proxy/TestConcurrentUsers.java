@@ -28,6 +28,7 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,6 +48,7 @@ import eu.openanalytics.containerproxy.ContainerProxyApplication;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.runtime.RuntimeSetting;
 
+@Ignore
 @SpringBootTest(classes = { ContainerProxyApplication.class }, webEnvironment = WebEnvironment.RANDOM_PORT)
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
