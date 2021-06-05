@@ -21,6 +21,7 @@
 package eu.openanalytics.containerproxy.service;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
@@ -45,6 +47,7 @@ import eu.openanalytics.containerproxy.model.runtime.ProxyStatus;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSinkConduit;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSourceConduit;
 import eu.openanalytics.containerproxy.util.ChannelActiveListener;
+import eu.openanalytics.containerproxy.spec.EngagementProperties;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpServerConnection;
 
@@ -61,7 +64,7 @@ public class HeartbeatService {
 	private Logger log = LogManager.getLogger(HeartbeatService.class);
 	
 	private Map<String, Long> proxyHeartbeats = Collections.synchronizedMap(new HashMap<>());
-		
+	private Map<String, Long> proxyEngagement = Collections.synchronizedMap(new HashMap<>());
 	private ScheduledExecutorService heartbeatExecutor = Executors.newScheduledThreadPool(3);
 	
 	private volatile boolean enabled;
@@ -71,7 +74,10 @@ public class HeartbeatService {
 	
 	@Inject
 	private Environment environment;
-	
+
+	@Resource
+	private EngagementProperties engagementProperties;
+
 	@PostConstruct
 	public void init() {
 		enabled = Boolean.valueOf(environment.getProperty(PROP_ENABLED, "false"));
@@ -79,7 +85,7 @@ public class HeartbeatService {
 		if (environment.getProperty(PROP_ENABLED) == null) {
 			enabled = environment.getProperty(PROP_RATE) != null || environment.getProperty(PROP_TIMEOUT) != null;
 		}
-		
+
 		Thread cleanupThread = new Thread(new InactiveProxyKiller(), InactiveProxyKiller.class.getSimpleName());
 		cleanupThread.setDaemon(true);
 		cleanupThread.start();
@@ -163,8 +169,27 @@ public class HeartbeatService {
 		}
 
 		private void checkPong(byte[] response) {
-			if (response.length > 0 && response[0] == WEBSOCKET_PONG) {
+			if (!(response.length > 0)) return;
+			if (response[0] == WEBSOCKET_PONG){
 				heartbeatReceived(proxyId);
+				return;
+			}
+			byte[] bytesHeader = {response[0], response[1]};
+			// convert short to unsigned int
+			int intHeader = ByteBuffer.wrap(bytesHeader).getShort() & 0xffff;
+			// if contains dataframe other than heartbeat
+			if (!engagementProperties.getFilterHeader().contains(intHeader)){
+				Proxy proxy = proxyService.getProxy(proxyId);
+				long currentTimestamp = System.currentTimeMillis();
+				Long lastActive = proxyEngagement.get(proxyId);
+				if (lastActive == null){
+					lastActive = proxy.getStartupTimestamp();
+				}
+				// to avoid updating frequently
+				if (currentTimestamp - lastActive > 15000){
+					proxyEngagement.put(proxyId, currentTimestamp);
+					log.debug("update active status of " + proxyId + "by header " + intHeader);
+				}
 			}
 		}
 	}
@@ -188,6 +213,14 @@ public class HeartbeatService {
 							if (proxySilence > heartbeatTimeout) {
 								log.info(String.format("Releasing inactive proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxySilence));
 								proxyHeartbeats.remove(proxy.getId());
+								proxyService.stopProxy(proxy, true, true);
+							}
+							Long lastActive = proxyEngagement.get(proxy.getId());
+							if (lastActive == null) lastActive = proxy.getStartupTimestamp();
+							long proxyIdle = currentTimestamp - lastActive;
+							if (proxyIdle > engagementProperties.getAutomaticTimeout()){
+								log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
+								proxyEngagement.remove(proxy.getId());
 								proxyService.stopProxy(proxy, true, true);
 							}
 						}
