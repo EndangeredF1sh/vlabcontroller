@@ -21,7 +21,6 @@
 package eu.openanalytics.containerproxy.service;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +35,7 @@ import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.xnio.StreamConnection;
@@ -47,6 +47,7 @@ import eu.openanalytics.containerproxy.model.runtime.ProxyStatus;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSinkConduit;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSourceConduit;
 import eu.openanalytics.containerproxy.util.ChannelActiveListener;
+import eu.openanalytics.containerproxy.util.RedisSessionHelper;
 import eu.openanalytics.containerproxy.spec.EngagementProperties;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpServerConnection;
@@ -77,6 +78,9 @@ public class HeartbeatService {
 
 	@Resource
 	private EngagementProperties engagementProperties;
+
+	@Autowired(required = false)
+	private RedisSessionHelper redisSessionHelper;
 
 	@PostConstruct
 	public void init() {
@@ -188,7 +192,6 @@ public class HeartbeatService {
 				// to avoid updating frequently
 				if (currentTimestamp - lastActive > 15000){
 					proxyEngagement.put(proxyId, currentTimestamp);
-					log.debug("update active status of " + proxyId + "by header " + intHeader);
 				}
 			}
 		}
@@ -215,13 +218,16 @@ public class HeartbeatService {
 								proxyHeartbeats.remove(proxy.getId());
 								proxyService.stopProxy(proxy, true, true);
 							}
-							Long lastActive = proxyEngagement.get(proxy.getId());
-							if (lastActive == null) lastActive = proxy.getStartupTimestamp();
-							long proxyIdle = currentTimestamp - lastActive;
-							if (proxyIdle > engagementProperties.getAutomaticTimeout()){
-								log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
-								proxyEngagement.remove(proxy.getId());
-								proxyService.stopProxy(proxy, true, true);
+							if (engagementProperties.isEnabled() && redisSessionHelper != null){
+								Long lastActive = proxyEngagement.get(proxy.getId());
+								if (lastActive == null) lastActive = proxy.getStartupTimestamp();
+								long proxyIdle = currentTimestamp - lastActive;
+								if (proxyIdle > engagementProperties.getAutomaticTimeout()){
+									log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
+									redisSessionHelper.logoutByUsername(proxy.getUserId());
+									proxyEngagement.remove(proxy.getId());
+									proxyService.stopProxy(proxy, true, true);
+								}
 							}
 						}
 					} catch (Throwable t) {

@@ -36,9 +36,17 @@ import java.util.Set;
 @Configuration
 @ConfigurationProperties(prefix = "proxy.engagement")
 public class EngagementProperties {
+    private boolean enabled = true;
     private Set<Integer> filterHeader;
     private long automaticTimeout = 900000;
 
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
     public long getAutomaticTimeout() {
         return automaticTimeout;
     }

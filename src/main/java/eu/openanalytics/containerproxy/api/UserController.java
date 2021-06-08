@@ -21,35 +21,36 @@
 
 package eu.openanalytics.containerproxy.api;
 
-import eu.openanalytics.containerproxy.event.ConfigUpdateEvent;
-import eu.openanalytics.containerproxy.util.ConfigFileHelper;
+import eu.openanalytics.containerproxy.model.runtime.Proxy;
+import eu.openanalytics.containerproxy.service.ProxyService;
+import eu.openanalytics.containerproxy.util.RedisSessionHelper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.security.NoSuchAlgorithmException;
+import java.util.List;
 
-@ConditionalOnExpression("${proxy.config.enable-refresh-api:false}")
 @RestController
-public class ConfigController {
+@ConditionalOnProperty(prefix = "spring.session", name = "store-type", havingValue = "redis")
+public class UserController {
+    @Autowired
+    private RedisSessionHelper sessionHelper;
 
     @Autowired
-    private ApplicationEventPublisher publisher;
+    private ProxyService proxyService;
 
-    @Autowired
-    private ConfigFileHelper configFileHelper;
-
-    @RequestMapping(value = "/api/config/refresh", method = RequestMethod.POST)
-    public ResponseEntity<String> refresh() throws NoSuchAlgorithmException {
-        String hash = configFileHelper.getConfigHash();
-        publisher.publishEvent(new ConfigUpdateEvent(this));
-        return new ResponseEntity<>(hash, HttpStatus.OK);
+    @RequestMapping(value = "/api/user/{userid}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> cleanup(@PathVariable String userid){
+        List<Proxy> proxyList = proxyService.getProxies(p -> p.getUserId().equals(userid), false);
+        sessionHelper.logoutByUsername(userid);
+        if (proxyList.isEmpty()){
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        for (Proxy proxy: proxyList){
+            proxyService.stopProxy(proxy, true, false);
+        }
+        return new ResponseEntity<>("cleaned up " + userid, HttpStatus.OK);
     }
 }
