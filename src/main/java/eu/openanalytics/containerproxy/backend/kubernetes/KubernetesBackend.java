@@ -38,6 +38,7 @@ import javax.json.JsonPatch;
 
 import javax.inject.Inject;
 
+import com.google.common.base.Strings;
 import io.fabric8.kubernetes.api.model.*;
 import org.apache.commons.io.IOUtils;
 
@@ -80,6 +81,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	private static final String PROPERTY_IMG_PULL_SECRETS = "image-pull-secrets";
 	private static final String PROPERTY_IMG_PULL_SECRET = "image-pull-secret";
 	private static final String PROPERTY_NODE_SELECTOR = "node-selector";
+	private static final String PROPERTY_UID_NAMESPACE = "custom-namespace";
+	private static final String PROPERTY_NAMESPACE_PREFIX = "namespace-prefix";
 	
 	private static final String DEFAULT_NAMESPACE = "default";
 	private static final String DEFAULT_API_VERSION = "v1";
@@ -129,6 +132,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		container.setId(UUID.randomUUID().toString());
 		
 		String kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
+		String namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
+		boolean uidNamespace = Boolean.valueOf(getProperty(PROPERTY_UID_NAMESPACE, "false"));
+		log.info("UserID Namespace Mode:" + uidNamespace);
+		if (uidNamespace){
+			kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : namespacePrefix + "-" + proxy.getUserId();
+		}
 		String apiVersion = getProperty(PROPERTY_API_VERSION, DEFAULT_API_VERSION);
 		
 		String[] volumeStrings = Optional.ofNullable(spec.getVolumes()).orElse(new String[] {});

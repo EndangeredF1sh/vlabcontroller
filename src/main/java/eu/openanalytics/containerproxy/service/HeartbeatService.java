@@ -220,7 +220,7 @@ public class HeartbeatService {
 							}
 							if (engagementProperties.isEnabled() && redisSessionHelper != null){
 								Long lastActive = proxyEngagement.get(proxy.getId());
-								if (lastActive == null) lastActive = proxy.getStartupTimestamp();
+								if (lastActive == null) continue; // pure HTTP applications have no lastActive timestamp
 								long proxyIdle = currentTimestamp - lastActive;
 								if (proxyIdle > engagementProperties.getAutomaticTimeout()){
 									log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
