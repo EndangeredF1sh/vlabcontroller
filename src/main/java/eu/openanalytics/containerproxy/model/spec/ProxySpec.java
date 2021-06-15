@@ -41,6 +41,7 @@ public class ProxySpec {
 	
 	private String kubernetesPodPatches;
 	private List<String> kubernetesAdditionalManifests = new ArrayList<>();
+	private List<SubApplicationSpec> subApps;
 
 	public ProxySpec() {
 		settings = new HashMap<>();
@@ -128,7 +129,15 @@ public class ProxySpec {
 	public List<String> getKubernetesAdditionalManifests() {
 		return kubernetesAdditionalManifests;
 	}
-	
+
+	public List<SubApplicationSpec> getSubApps() {
+		return subApps;
+	}
+
+	public void setSubApps(List<SubApplicationSpec> subApps) {
+		this.subApps = subApps;
+	}
+
 	public void copy(ProxySpec target) {
 		target.setId(id);
 		target.setDisplayName(displayName);
