@@ -224,7 +224,6 @@ public class HeartbeatService {
 								long proxyIdle = currentTimestamp - lastActive;
 								if (proxyIdle > engagementProperties.getAutomaticTimeout()){
 									log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
-									redisSessionHelper.logoutByUsername(proxy.getUserId());
 									proxyEngagement.remove(proxy.getId());
 									proxyService.stopProxy(proxy, true, true);
 								}
