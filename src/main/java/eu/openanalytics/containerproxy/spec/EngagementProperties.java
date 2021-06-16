@@ -27,6 +27,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,7 @@ public class EngagementProperties {
     private boolean enabled = true;
     private Set<Integer> filterHeader;
     private long automaticTimeout = 900000;
+    private Duration maxAge = Duration.ofHours(4);
 
     public boolean isEnabled() {
         return enabled;
@@ -65,5 +67,11 @@ public class EngagementProperties {
 
     public Set<Integer> getFilterHeader(){
         return this.filterHeader;
+    }
+    public void setMaxAge(String duration){
+        this.maxAge = Duration.parse(duration);
+    }
+    public Duration getMaxAge(){
+        return maxAge;
     }
 }

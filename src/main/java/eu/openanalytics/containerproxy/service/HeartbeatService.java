@@ -22,6 +22,8 @@ package eu.openanalytics.containerproxy.service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,7 +100,12 @@ public class HeartbeatService {
 	public void setEnabled(boolean enabled) {
 		this.enabled = enabled;
 	}
-	
+
+	public Map<String, Long> getProxyEngagement() {
+		return proxyEngagement;
+	}
+
+
 	public void attachHeartbeatChecker(HttpServerExchange exchange, String proxyId) {
 		if (exchange.isUpgrade()) {
 			// For websockets, attach a ping-pong listener to the underlying TCP channel.
@@ -191,6 +198,7 @@ public class HeartbeatService {
 				}
 				// to avoid updating frequently
 				if (currentTimestamp - lastActive > 15000){
+					log.debug("active packet: 0x" + new BigInteger(1, Arrays.copyOfRange(response, 0, 4)).toString(16));
 					proxyEngagement.put(proxyId, currentTimestamp);
 				}
 			}
@@ -209,14 +217,22 @@ public class HeartbeatService {
 						long currentTimestamp = System.currentTimeMillis();
 						for (Proxy proxy: proxyService.getProxies(null, true)) {
 							if (proxy.getStatus() != ProxyStatus.Up) continue;
-							
+							if (currentTimestamp - proxy.getStartupTimestamp() > engagementProperties.getMaxAge().toMillis()){
+								log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), engagementProperties.getMaxAge().toHours()));
+								proxyHeartbeats.remove(proxy.getId());
+								proxyEngagement.remove(proxy.getId());
+								proxyService.stopProxy(proxy, true, true);
+								continue;
+							}
 							Long lastHeartbeat = proxyHeartbeats.get(proxy.getId());
 							if (lastHeartbeat == null) lastHeartbeat = proxy.getStartupTimestamp();
 							long proxySilence = currentTimestamp - lastHeartbeat;
 							if (proxySilence > heartbeatTimeout) {
 								log.info(String.format("Releasing inactive proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxySilence));
 								proxyHeartbeats.remove(proxy.getId());
+								proxyEngagement.remove(proxy.getId());
 								proxyService.stopProxy(proxy, true, true);
+								continue;
 							}
 							if (engagementProperties.isEnabled() && redisSessionHelper != null){
 								Long lastActive = proxyEngagement.get(proxy.getId());
@@ -224,6 +240,7 @@ public class HeartbeatService {
 								long proxyIdle = currentTimestamp - lastActive;
 								if (proxyIdle > engagementProperties.getAutomaticTimeout()){
 									log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
+									proxyHeartbeats.remove(proxy.getId());
 									proxyEngagement.remove(proxy.getId());
 									proxyService.stopProxy(proxy, true, true);
 								}
