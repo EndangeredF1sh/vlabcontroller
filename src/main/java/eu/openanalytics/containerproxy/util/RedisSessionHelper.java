@@ -32,7 +32,7 @@ import java.util.Map;
 
 @Component
 @ConditionalOnProperty(prefix = "spring.session", name = "store-type", havingValue = "redis")
-@EnableRedisHttpSession
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 14400)
 public class RedisSessionHelper {
 
     @Autowired
