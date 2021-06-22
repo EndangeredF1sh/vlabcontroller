@@ -25,9 +25,10 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.dataformat.yaml.snakeyaml.error.MarkedYAMLException;
 import com.google.common.base.Charsets;
 import eu.openanalytics.containerproxy.ContainerProxyApplication;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -39,8 +40,13 @@ import java.security.NoSuchAlgorithmException;
 
 @Component
 public class ConfigFileHelper {
+    @Autowired
+    private Environment environment;
+
     private File getConfigFile(){
-        File file = Paths.get(ContainerProxyApplication.CONFIG_FILENAME).toFile();
+        String path = environment.getProperty("spring.config.location");
+        path = path == null ? ContainerProxyApplication.CONFIG_FILENAME : path;
+        File file = Paths.get(path).toFile();
         if (file.exists()) {
             return file;
         }
