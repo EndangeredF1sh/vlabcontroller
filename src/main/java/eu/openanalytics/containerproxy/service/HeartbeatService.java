@@ -37,7 +37,6 @@ import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.xnio.StreamConnection;
@@ -49,7 +48,6 @@ import eu.openanalytics.containerproxy.model.runtime.ProxyStatus;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSinkConduit;
 import eu.openanalytics.containerproxy.util.DelegatingStreamSourceConduit;
 import eu.openanalytics.containerproxy.util.ChannelActiveListener;
-import eu.openanalytics.containerproxy.util.RedisSessionHelper;
 import eu.openanalytics.containerproxy.spec.EngagementProperties;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpServerConnection;
@@ -80,9 +78,6 @@ public class HeartbeatService {
 
 	@Resource
 	private EngagementProperties engagementProperties;
-
-	@Autowired(required = false)
-	private RedisSessionHelper redisSessionHelper;
 
 	@PostConstruct
 	public void init() {
@@ -234,7 +229,7 @@ public class HeartbeatService {
 								proxyService.stopProxy(proxy, true, true);
 								continue;
 							}
-							if (engagementProperties.isEnabled() && redisSessionHelper != null){
+							if (engagementProperties.isEnabled()){
 								Long lastActive = proxyEngagement.get(proxy.getId());
 								if (lastActive == null) continue; // pure HTTP applications have no lastActive timestamp
 								long proxyIdle = currentTimestamp - lastActive;
