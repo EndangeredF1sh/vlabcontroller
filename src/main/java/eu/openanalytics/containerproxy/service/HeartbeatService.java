@@ -212,6 +212,7 @@ public class HeartbeatService {
 						long currentTimestamp = System.currentTimeMillis();
 						for (Proxy proxy: proxyService.getProxies(null, true)) {
 							if (proxy.getStatus() != ProxyStatus.Up) continue;
+							else if (proxy.getSpec().getId().equals("filebrowser")) continue;
 							if (currentTimestamp - proxy.getStartupTimestamp() > engagementProperties.getMaxAge().toMillis()){
 								log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), engagementProperties.getMaxAge().toHours()));
 								proxyHeartbeats.remove(proxy.getId());
