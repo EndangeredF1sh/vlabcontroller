@@ -180,7 +180,10 @@ public class ProxySpec {
 		if (kubernetesAdditionalManifests != null) {
 			target.setKubernetesAdditionalManifests(kubernetesAdditionalManifests.stream().collect(Collectors.toList()));
 		}
-		
+
+		if (subApps != null){
+			target.setSubApps(subApps);
+		}
 	}
 
 }
