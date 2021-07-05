@@ -231,6 +231,7 @@ public class UserService {
 
 				String userId = securityContext.getAuthentication().getName();
 
+				logoutStrategy.onLogout(userId);
 				log.info(String.format("User logged out [user: %s]", userId));
 				applicationEventPublisher.publishEvent(new UserLogoutEvent(
 						this,
