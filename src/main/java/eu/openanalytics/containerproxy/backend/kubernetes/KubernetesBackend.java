@@ -118,6 +118,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		}
 		
 		kubeClient = new DefaultKubernetesClient(configBuilder.build());
+		cleanBeforeStart();
 	}
 
 	public void initialize(KubernetesClient client) {
@@ -455,6 +456,27 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		return PROPERTY_PREFIX;
 	}
 	
-
-
+	public void cleanBeforeStart() {
+		String identifierLabel = environment.getProperty("proxy.identifier-label");
+		String identifierValue = environment.getProperty("proxy.identifier-value");
+		if (Strings.isNullOrEmpty(identifierLabel) || Strings.isNullOrEmpty(identifierValue)){
+			return;
+		}
+		PodList orphanPods = kubeClient.pods().inAnyNamespace().withLabel(identifierLabel, identifierValue).list();
+		if (orphanPods != null){
+			for (Pod pod: orphanPods.getItems()){
+				String namespace = pod.getMetadata().getNamespace();
+				kubeClient.pods().inNamespace(namespace).delete(pod);
+			}
+			log.info("Cleaned " + orphanPods.getItems().size() + " pods");
+		}
+		ServiceList orphanServices = kubeClient.services().inAnyNamespace().withLabel(identifierLabel, identifierValue).list();
+		if (orphanServices != null){
+			for (Service service: orphanServices.getItems()){
+				String namespace = service.getMetadata().getNamespace();
+				kubeClient.services().inNamespace(namespace).delete(service);
+			}
+			log.info("Cleaned " + orphanServices.getItems().size() + " services");
+		}
+	}
 }
