@@ -189,6 +189,8 @@ public class HeartbeatService {
 				long currentTimestamp = System.currentTimeMillis();
 				Long lastActive = proxyEngagement.get(proxyId);
 				if (lastActive == null){
+					// if a proxy is terminated manually before lastActive created, stop checkPong.
+					if (proxy == null) return;
 					lastActive = proxy.getStartupTimestamp();
 				}
 				// to avoid updating frequently
