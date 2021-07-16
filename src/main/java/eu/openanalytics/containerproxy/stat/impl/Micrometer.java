@@ -59,38 +59,34 @@ public class Micrometer implements IStatCollector {
         appStartFailedCounter = registry.counter("startFailed");
         authFailedCounter = registry.counter("authFailed");
 
-        for (ProxySpec spec : proxyService.getProxySpecs(null, true)) {
-            registry.counter("appStarts", "spec.id", spec.getId());
-            registry.counter("appStops", "spec.id", spec.getId());
-            registry.timer("startupTime", "spec.id", spec.getId());
-            registry.timer("usageTime", "spec.id", spec.getId());
-        }
     }
 
     @EventListener
     public void onUserLogoutEvent(UserLogoutEvent event) {
         logger.debug("UserLogoutEvent [user: {}, sessionId: {}, expired: {}]", event.getUserId(), event.getSessionId(), event.getWasExpired());
         userLogouts.increment();
+        registry.counter("userIdLogouts", "user.id", event.getUserId()).increment();
     }
 
     @EventListener
     public void onUserLoginEvent(UserLoginEvent event) {
         logger.debug("UserLoginEvent [user: {}, sessionId: {}]", event.getUserId(), event.getSessionId());
         userLogins.increment();
+        registry.counter("userIdLogins", "user.id", event.getUserId()).increment();
     }
 
     @EventListener
     public void onProxyStartEvent(ProxyStartEvent event) {
         logger.debug("ProxyStartEvent [user: {}, startupTime: {}]", event.getUserId(), event.getStartupTime());
-        registry.counter("appStarts", "spec.id", event.getSpecId()).increment();
-        registry.timer("startupTime", "spec.id", event.getSpecId()).record(event.getStartupTime());
+        registry.counter("appStarts", "spec.id", event.getSpecId(), "user.id", event.getUserId()).increment();
+        registry.timer("startupTime", "spec.id", event.getSpecId(), "user.id", event.getUserId()).record(event.getStartupTime());
     }
 
     @EventListener
     public void onProxyStopEvent(ProxyStopEvent event) {
         logger.debug("ProxyStopEvent [user: {}, usageTime: {}]", event.getUserId(), event.getUsageTime());
-        registry.counter("appStops", "spec.id", event.getSpecId()).increment();
-        registry.timer("usageTime", "spec.id", event.getSpecId()).record(event.getUsageTime());
+        registry.counter("appStops", "spec.id", event.getSpecId(), "user.id", event.getUserId()).increment();
+        registry.timer("usageTime", "spec.id", event.getSpecId(), "user.id", event.getUserId()).record(event.getUsageTime());
     }
 
     @EventListener
