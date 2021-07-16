@@ -415,6 +415,24 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	
 	@Override
 	protected void doStopProxy(Proxy proxy) throws Exception {
+		// wait a bit to make sure there will be a pod to remove
+		// prevent orphan pods issue (start an app and sign out quickly)
+		int retry = 40;
+		int interval = 3000;
+		boolean responded = false;
+		for (int i=0; i<retry; i++){
+			if (proxy.getContainers().isEmpty()) {
+				log.info("Proxy pod unresponsive, retrying ({}/{})", i+1, retry);
+				Thread.sleep(interval);
+			}else{
+				responded = true;
+				log.info("Pod responded, removing...");
+				break;
+			}
+		}
+		if (!responded){
+			throw new ContainerProxyException("Failed to stop container: no pod was founded");
+		}
 		for (Container container: proxy.getContainers()) {
 			String kubeNamespace = container.getParameters().get(PARAM_NAMESPACE).toString();
 			if (kubeNamespace == null) {
