@@ -206,6 +206,9 @@ public class UserService {
 		Authentication auth = event.getAuthentication();
 		String userName = auth.getName();
 
+		HttpSession session = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getSession();
+		if (session.getLastAccessedTime() - session.getCreationTime() > 100) return;
+
 		log.info(String.format("User logged in [user: %s]", userName));
 
 		String userId = getUserId(auth);
