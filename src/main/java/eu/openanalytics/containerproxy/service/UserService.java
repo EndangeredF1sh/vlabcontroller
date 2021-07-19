@@ -207,7 +207,12 @@ public class UserService {
 		String userName = auth.getName();
 
 		HttpSession session = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getSession();
-		if (session.getLastAccessedTime() - session.getCreationTime() > 100) return;
+		boolean firstLogin = session.getAttribute("firstLogin") == null || (Boolean) session.getAttribute("firstLogin");
+		if (firstLogin){
+			session.setAttribute("firstLogin", false);
+		}else{
+			return;
+		}
 
 		log.info(String.format("User logged in [user: %s]", userName));
 
