@@ -76,7 +76,15 @@ public class ContainerProxyApplication {
 	public static void main(String[] args) {
 		SpringApplication app = new SpringApplication(ContainerProxyApplication.class);
 
-		boolean hasExternalConfig = Files.exists(Paths.get(CONFIG_FILENAME));
+		String configFilename = System.getenv("SPRING_CONFIG_LOCATION");
+		for (String arg: args){
+			String pattern = "spring.config.location=";
+			int idx = arg.indexOf(pattern);
+			if (idx > -1) configFilename = arg.substring(idx + pattern.length());
+			break;
+		}
+		if (configFilename == null) configFilename = CONFIG_FILENAME;
+		boolean hasExternalConfig = Files.exists(Paths.get(configFilename));
 		if (!hasExternalConfig) app.setAdditionalProfiles(CONFIG_DEMO_PROFILE);
 
 		setDefaultProperties(app);
