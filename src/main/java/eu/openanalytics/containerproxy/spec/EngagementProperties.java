@@ -28,6 +28,7 @@ import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +40,7 @@ import java.util.Set;
 public class EngagementProperties {
     private boolean enabled = true;
     private Set<Integer> filterHeader;
+    private List<String> filterPath = new ArrayList<>();
     private long automaticTimeout = 900000;
     private Duration maxAge = Duration.ofHours(4);
 
@@ -73,5 +75,11 @@ public class EngagementProperties {
     }
     public Duration getMaxAge(){
         return maxAge;
+    }
+    public List<String> getFilterPath() {
+        return filterPath;
+    }
+    public void setFilterPath(List<String> filterPath) {
+        this.filterPath = filterPath;
     }
 }

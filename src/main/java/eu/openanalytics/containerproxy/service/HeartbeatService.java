@@ -109,6 +109,20 @@ public class HeartbeatService {
 			HttpServerConnection httpConn = (HttpServerConnection) exchange.getConnection();
 			heartbeatExecutor.schedule(() -> connector.wrapChannels(httpConn.getChannel()), 3000, TimeUnit.MILLISECONDS);
 		} else {
+			// request URI prefix filter
+			// exchange.getRequestPath() == /proxy_endpoint/<proxy_uuid>/<real-path-in-container>
+			// exchange.getRelativePath() == /<real-path-in-container>
+			// e.g access http://<domain-name>/<spring-context-path>/app/app_name/static/js/example.js
+			// exchange.getRequestPath() == /proxy_endpoint/<proxy-uuid>/static/js/example.js
+			// exchange.getRelativePath() == /static/js/example.js
+			for (String path: engagementProperties.getFilterPath()){
+				String relativeRequestPath = exchange.getRelativePath();
+				log.debug("Client requests {}", relativeRequestPath);
+				if (relativeRequestPath.startsWith(path)) {
+					log.debug("Matched prefix {}", path);
+					return;
+				}
+			}
 			// For regular HTTP requests, just trigger one heartbeat.
 			heartbeatReceived(proxyId);
 		}
