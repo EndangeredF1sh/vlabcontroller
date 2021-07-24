@@ -73,6 +73,7 @@ public class Micrometer implements IStatCollector {
         logger.debug("UserLoginEvent [user: {}, sessionId: {}]", event.getUserId(), event.getSessionId());
         userLogins.increment();
         registry.counter("userIdLogins", "user.id", event.getUserId()).increment();
+        registry.counter("userIdLogouts", "user.id", event.getUserId()).increment(0);
     }
 
     @EventListener
