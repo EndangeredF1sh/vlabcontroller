@@ -117,9 +117,9 @@ public class HeartbeatService {
 			// exchange.getRelativePath() == /static/js/example.js
 			for (String path: engagementProperties.getFilterPath()){
 				String relativeRequestPath = exchange.getRelativePath();
-				log.debug("Client requests {}", relativeRequestPath);
+				log.debug("Client requests {} to proxy {}", relativeRequestPath, proxyId);
 				if (relativeRequestPath.startsWith(path)) {
-					log.debug("Matched prefix {}", path);
+					log.debug("Matched prefix {} of proxy {}", path, proxyId);
 					return;
 				}
 			}
@@ -209,7 +209,7 @@ public class HeartbeatService {
 				}
 				// to avoid updating frequently
 				if (currentTimestamp - lastActive > 15000){
-					log.debug("active packet: 0x" + new BigInteger(1, Arrays.copyOfRange(response, 0, 4)).toString(16));
+					log.debug("active packet: 0x" + new BigInteger(1, Arrays.copyOfRange(response, 0, 4)).toString(16) + "for proxy " + proxyId);
 					proxyEngagement.put(proxyId, currentTimestamp);
 				}
 			}
