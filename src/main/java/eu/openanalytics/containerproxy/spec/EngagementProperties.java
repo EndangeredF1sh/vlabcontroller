@@ -29,9 +29,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @RefreshScope
 @EnableConfigurationProperties
@@ -39,36 +37,16 @@ import java.util.Set;
 @ConfigurationProperties(prefix = "proxy.engagement")
 public class EngagementProperties {
     private boolean enabled = true;
-    private Set<Integer> filterHeader;
     private List<String> filterPath = new ArrayList<>();
-    private long automaticTimeout = 900000;
+    private int idleRetry = 3;
+    private int threshold = 230;
     private Duration maxAge = Duration.ofHours(4);
 
     public boolean isEnabled() {
         return enabled;
     }
-
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-    }
-    public long getAutomaticTimeout() {
-        return automaticTimeout;
-    }
-
-    public void setAutomaticTimeout(long automaticTimeout) {
-        this.automaticTimeout = automaticTimeout;
-    }
-
-    public void setFilterHeader(List<Integer> filterHeader){
-        if (filterHeader != null){
-            this.filterHeader = new HashSet<>(filterHeader);
-        }else{
-            this.filterHeader = new HashSet<>();
-        }
-    }
-
-    public Set<Integer> getFilterHeader(){
-        return this.filterHeader;
     }
     public void setMaxAge(String duration){
         this.maxAge = Duration.parse(duration);
@@ -81,5 +59,21 @@ public class EngagementProperties {
     }
     public void setFilterPath(List<String> filterPath) {
         this.filterPath = filterPath;
+    }
+
+    public int getIdleRetry() {
+        return idleRetry;
+    }
+
+    public void setIdleRetry(int idleRetry) {
+        this.idleRetry = idleRetry;
+    }
+
+    public int getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(int threshold) {
+        this.threshold = threshold;
     }
 }

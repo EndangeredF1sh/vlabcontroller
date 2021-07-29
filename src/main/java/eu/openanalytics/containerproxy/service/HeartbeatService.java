@@ -22,11 +22,7 @@ package eu.openanalytics.containerproxy.service;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +31,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import javax.inject.Inject;
 
+import eu.openanalytics.containerproxy.model.runtime.HeartbeatStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.core.env.Environment;
@@ -65,7 +62,7 @@ public class HeartbeatService {
 	private Logger log = LogManager.getLogger(HeartbeatService.class);
 	
 	private Map<String, Long> proxyHeartbeats = Collections.synchronizedMap(new HashMap<>());
-	private Map<String, Long> proxyEngagement = Collections.synchronizedMap(new HashMap<>());
+	private Map<String, HeartbeatStatus> websocketHeartbeats = Collections.synchronizedMap(new HashMap<>());
 	private ScheduledExecutorService heartbeatExecutor = Executors.newScheduledThreadPool(3);
 	
 	private volatile boolean enabled;
@@ -96,10 +93,13 @@ public class HeartbeatService {
 		this.enabled = enabled;
 	}
 
-	public Map<String, Long> getProxyEngagement() {
-		return proxyEngagement;
+	public Map<String, HeartbeatStatus> getWebsocketHeartbeats() {
+		return websocketHeartbeats;
 	}
 
+	public Map<String, Long> getProxyHeartbeats(){
+		return proxyHeartbeats;
+	}
 
 	public void attachHeartbeatChecker(HttpServerExchange exchange, String proxyId) {
 		if (exchange.isUpgrade()) {
@@ -173,7 +173,7 @@ public class HeartbeatService {
 				// reschedule ping
 				heartbeatExecutor.schedule(() -> sendPing(writeListener, streamConn), getHeartbeatRate(), TimeUnit.MILLISECONDS);
 				// mark as we received a heartbeat
-				heartbeatReceived(proxyId);
+				// heartbeatReceived(proxyId);
 				return;
 			}
 			if (!streamConn.isOpen()) return;
@@ -191,35 +191,41 @@ public class HeartbeatService {
 		private void checkPong(byte[] response) {
 			if (!(response.length > 0)) return;
 			if (response[0] == WEBSOCKET_PONG){
-				heartbeatReceived(proxyId);
+				// ignore websocket PING PONG (native heart beat)
+				// heartbeatReceived(proxyId);
 				return;
 			}
-			byte[] bytesHeader = {response[0], response[1]};
-			// convert short to unsigned int
-			int intHeader = ByteBuffer.wrap(bytesHeader).getShort() & 0xffff;
-			// if contains dataframe other than heartbeat
-			if (!engagementProperties.getFilterHeader().contains(intHeader)){
-				Proxy proxy = proxyService.getProxy(proxyId);
-				long currentTimestamp = System.currentTimeMillis();
-				Long lastActive = proxyEngagement.get(proxyId);
-				if (lastActive == null){
-					// if a proxy is terminated manually before lastActive created, stop checkPong.
-					if (proxy == null) return;
-					lastActive = proxy.getStartupTimestamp();
-				}
-				// to avoid updating frequently
-				if (currentTimestamp - lastActive > 15000){
-					log.debug("active packet: 0x" + new BigInteger(1, Arrays.copyOfRange(response, 0, 4)).toString(16) + "for proxy " + proxyId);
-					proxyEngagement.put(proxyId, currentTimestamp);
-				}
+
+			// payload length analyzer
+			// https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
+			int payloadLength = response[1] & 0x7F;
+			if (payloadLength == 126){
+				payloadLength = ByteBuffer.wrap(new byte[]{response[2], response[3]}).getShort() & 0xFFFF;
+			}else if (payloadLength == 127){
+				// We don't calculate the exact payload length of such packet because its payload length greater than 65535 bytes.
+				// Calculating it is meaningless.
+				// If you really want to calculate it, use BigInteger(1, <byte array of response[2] to response[9]>)
+				payloadLength = 65535 * 2;
 			}
+
+			Proxy proxy = proxyService.getProxy(proxyId);
+
+			// if a proxy is terminated manually before status block created, stop checkPong.
+			if (proxy == null || (proxy.getStatus() == ProxyStatus.Stopping || proxy.getStatus() == ProxyStatus.Stopped)) {
+				websocketHeartbeats.remove(proxyId);
+				return;
+			}
+
+			HeartbeatStatus heartbeatStatus = websocketHeartbeats.computeIfAbsent(proxyId, k -> new HeartbeatStatus());
+			int lastLength = heartbeatStatus.getTotalPayloadLength();
+			heartbeatStatus.setTotalPayloadLength(lastLength + payloadLength);
 		}
 	}
 	
 	private class InactiveProxyKiller implements Runnable {
 		@Override
 		public void run() {
-			long cleanupInterval = 2 * getHeartbeatRate();
+			long cleanupInterval = getHeartbeatRate();
 			long heartbeatTimeout = getHeartbeatTimeout();
 
 			while (true) {
@@ -229,33 +235,66 @@ public class HeartbeatService {
 						for (Proxy proxy: proxyService.getProxies(null, true)) {
 							if (proxy.getStatus() != ProxyStatus.Up) continue;
 							else if (proxy.getSpec().getId().equals("filebrowser")) continue;
+
+							// reached max-age limitation
 							if (currentTimestamp - proxy.getStartupTimestamp() > engagementProperties.getMaxAge().toMillis()){
 								log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), engagementProperties.getMaxAge().toHours()));
 								proxyHeartbeats.remove(proxy.getId());
-								proxyEngagement.remove(proxy.getId());
+								websocketHeartbeats.remove(proxy.getId());
 								proxyService.stopProxy(proxy, true, true);
 								continue;
 							}
-							Long lastHeartbeat = proxyHeartbeats.get(proxy.getId());
-							if (lastHeartbeat == null) lastHeartbeat = proxy.getStartupTimestamp();
-							long proxySilence = currentTimestamp - lastHeartbeat;
-							if (proxySilence > heartbeatTimeout) {
-								log.info(String.format("Releasing inactive proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxySilence));
-								proxyHeartbeats.remove(proxy.getId());
-								proxyEngagement.remove(proxy.getId());
-								proxyService.stopProxy(proxy, true, true);
-								continue;
-							}
+
+							// websocket idle termination
+							boolean isPureHttp = false;
+							boolean isIdled = false;
+							int idleRetryLimit = engagementProperties.getIdleRetry();
 							if (engagementProperties.isEnabled()){
-								Long lastActive = proxyEngagement.get(proxy.getId());
-								if (lastActive == null) continue; // pure HTTP applications have no lastActive timestamp
-								long proxyIdle = currentTimestamp - lastActive;
-								if (proxyIdle > engagementProperties.getAutomaticTimeout()){
-									log.info(String.format("Releasing idle proxy [user: %s] [spec: %s] [id: %s] [silence: %dms]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), proxyIdle));
+								HeartbeatStatus heartbeatStatus = websocketHeartbeats.get(proxy.getId());
+
+								// 230 bytes per second default (10% load, 2300 bytes/sec when working on vscode)
+								int threshold = engagementProperties.getThreshold();
+
+								if (heartbeatStatus == null) {
+									isPureHttp = true;
+								}else{
+									long duration = currentTimestamp - heartbeatStatus.getStartRecordTimestamp();
+									// idle
+									double rate = heartbeatStatus.getTotalPayloadLength() / (duration / 1000.0);
+									if (rate < threshold){
+										heartbeatStatus.increaseCounter();
+										log.debug("proxy {} websocket idle detected ({}/{})! average speed={} bytes/sec, threshold={} bytes/sec", proxy.getId(), heartbeatStatus.getTerminateCounter(), idleRetryLimit, rate, threshold);
+									}
+									// active
+									else{
+										log.debug("proxy {} websocket active, average speed={} bytes/sec, threshold={} bytes/sec", proxy.getId(), rate, threshold);
+										heartbeatStatus.clearAll();
+									}
+
+									// idle confirmed
+									if (heartbeatStatus.getTerminateCounter() >= idleRetryLimit){
+										isIdled = true;
+									}
+
+									heartbeatStatus.setLastRecordTimestamp(System.currentTimeMillis());
+								}
+
+								Long lastHeartbeat = proxyHeartbeats.get(proxy.getId());
+								if (lastHeartbeat == null) lastHeartbeat = proxy.getStartupTimestamp();
+								long proxySilence = currentTimestamp - lastHeartbeat;
+								if ((proxySilence > heartbeatTimeout) && (isPureHttp | isIdled)) {
+									log.info("Releasing {} proxy [user: {}] [spec: {}] [id: {}] [silence: {}ms]",
+											isPureHttp ? "inactive" : "idled",
+											proxy.getUserId(),
+											proxy.getSpec().getId(),
+											proxy.getId(),
+											isPureHttp ? proxySilence : cleanupInterval * heartbeatStatus.getTerminateCounter());
+
 									proxyHeartbeats.remove(proxy.getId());
-									proxyEngagement.remove(proxy.getId());
+									websocketHeartbeats.remove(proxy.getId());
 									proxyService.stopProxy(proxy, true, true);
 								}
+								log.debug("proxy {} received HTTP requests {} ms ago, threshold={} ms", proxy.getId(), proxySilence, heartbeatTimeout);
 							}
 						}
 					} catch (Throwable t) {
