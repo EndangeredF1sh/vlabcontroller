@@ -109,6 +109,10 @@ public class ContainerProxyApplication {
 		String sameSiteCookie = environment.getProperty("proxy.same-site-cookie", "Lax");
 		log.debug("Setting sameSiteCookie policy to {}" , sameSiteCookie);
 		defaultCookieSerializer.setSameSite(sameSiteCookie);
+		String proxyIdentifier = environment.getProperty("proxy.identifier-value");
+		if (proxyIdentifier != null && !proxyIdentifier.isEmpty()){
+			defaultCookieSerializer.setCookieName("SESSION_" + proxyIdentifier.toUpperCase());
+		}
 	}
 
 	@Bean
