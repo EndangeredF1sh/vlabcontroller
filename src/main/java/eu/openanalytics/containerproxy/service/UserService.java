@@ -49,10 +49,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpSession;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -74,6 +71,8 @@ public class UserService {
 
 	@Inject
 	private ApplicationEventPublisher applicationEventPublisher;
+
+	private Map<String, String> userInitiatedLogoutMap = new HashMap<>();
 
 	public Authentication getCurrentAuth() {
 		return SecurityContextHolder.getContext().getAuthentication();
@@ -187,13 +186,12 @@ public class UserService {
 		String userId = getUserId(auth);
 		if (userId == null) return;
 
-		if (logoutStrategy != null) logoutStrategy.onLogout(userId);
+		if (logoutStrategy != null) logoutStrategy.onLogout(userId, false);
 		log.info(String.format("User logged out [user: %s]", userId));
 
 		HttpSession session = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getSession();
-		session.setAttribute(ATTRIBUTE_USER_INITIATED_LOGOUT, "true"); // mark that the user initiated the logout
-
-		String sessionId = RequestContextHolder.currentRequestAttributes().getSessionId();
+		String sessionId = session.getId();
+		userInitiatedLogoutMap.put(sessionId, "true");
 		applicationEventPublisher.publishEvent(new UserLogoutEvent(
 				this,
 				userId,
@@ -225,8 +223,14 @@ public class UserService {
 
 	@EventListener
 	public void onHttpSessionDestroyedEvent(HttpSessionDestroyedEvent event) {
-		String userInitiatedLogout = (String) event.getSession().getAttribute(ATTRIBUTE_USER_INITIATED_LOGOUT);
-
+		/*
+			ref: https://docs.spring.io/spring-session/docs/current/api/org/springframework/session/events/AbstractSessionEvent.html
+			For some SessionRepository implementations it may not be possible to get the original session in which case this may be null.
+			event.getSession() != ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest().getSession() in Redis Session Repository
+			Session Attributes set in logout() cannot be fetched here
+			but these two session instances have same sessionId, an additional Map can be used as workaround
+		 */
+		String userInitiatedLogout = userInitiatedLogoutMap.remove(event.getId());
 		if (userInitiatedLogout != null && userInitiatedLogout.equals("true")) {
 			// user initiated the logout
 			// event already handled by the logout() function above -> ignore it
@@ -239,8 +243,8 @@ public class UserService {
 
 				String userId = securityContext.getAuthentication().getName();
 
-				logoutStrategy.onLogout(userId);
-				log.info(String.format("User logged out [user: %s]", userId));
+				logoutStrategy.onLogout(userId, true);
+				log.info(String.format("HTTP session expired [user: %s]", userId));
 				applicationEventPublisher.publishEvent(new UserLogoutEvent(
 						this,
 						userId,
