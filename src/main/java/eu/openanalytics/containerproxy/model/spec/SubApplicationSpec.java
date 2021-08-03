@@ -21,7 +21,8 @@
 package eu.openanalytics.containerproxy.model.spec;
 
 public class SubApplicationSpec {
-    private String path;
+    private String path = "";
+    private String subDomain = "";
     private String displayName;
     private String description;
 
@@ -31,6 +32,14 @@ public class SubApplicationSpec {
 
     public void setPath(String path) {
         this.path = path;
+    }
+
+    public String getSubDomain() {
+        return subDomain;
+    }
+
+    public void setSubDomain(String subDomain) {
+        this.subDomain = subDomain;
     }
 
     public String getDisplayName() {
