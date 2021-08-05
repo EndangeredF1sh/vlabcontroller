@@ -41,9 +41,6 @@ public class BaseController {
 
 	protected void prepareMap(ModelMap map) {
 		map.put("title", environment.getProperty("proxy.title", "ShinyProxy"));
-		map.put("bootstrapCss", "/webjars/bootstrap/3.4.1/css/bootstrap.min.css");
-		map.put("bootstrapJs", "/webjars/bootstrap/3.4.1/js/bootstrap.min.js");
-		map.put("jqueryJs", "/webjars/jquery/3.5.0/jquery.min.js");
 	}
 
 	public static class NotFoundException extends RuntimeException {
