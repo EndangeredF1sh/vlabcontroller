@@ -21,16 +21,12 @@
 package eu.openanalytics.containerproxy.backend.kubernetes;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -42,25 +38,20 @@ import com.google.common.base.Strings;
 import io.fabric8.kubernetes.api.model.*;
 import org.apache.commons.io.IOUtils;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr353.JSR353Module;
-import com.google.common.base.Charsets;
 import com.google.common.base.Splitter;
 
-import eu.openanalytics.containerproxy.ContainerProxyApplication;
 import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.backend.AbstractContainerBackend;
 import eu.openanalytics.containerproxy.model.runtime.Container;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
+import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.spec.expression.SpecExpressionContext;
-import eu.openanalytics.containerproxy.spec.expression.SpecExpressionResolver;
 import eu.openanalytics.containerproxy.util.Retrying;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
@@ -68,7 +59,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.internal.readiness.Readiness;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import org.opensaml.ws.wsaddressing.impl.MetadataBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.data.util.Pair;
 
 public class KubernetesBackend extends AbstractContainerBackend {
@@ -92,6 +84,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	private static final String PARAM_NAMESPACE = "namespace";
 	
 	private static final String SECRET_KEY_REF = "secretKeyRef";
+
+	private final Logger log = LogManager.getLogger(KubernetesBackend.class);
 
 	@Inject
 	private PodPatcher podPatcher;
@@ -263,14 +257,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		int totalWaitMs = Integer.parseInt(environment.getProperty("proxy.kubernetes.pod-wait-time", "60000"));
 		int maxTries = totalWaitMs / 1000;
 		Retrying.retry(i -> {
-				if (!Readiness.isReady(kubeClient.resource(startedPod).fromServer().get())) {
+				if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
 					if (i > 1 && log != null) log.debug(String.format("Container not ready yet, trying again (%d/%d)", i, maxTries));
 					return false;
 				}
 				return true;
 			}
 		, maxTries, 1000);
-		if (!Readiness.isReady(kubeClient.resource(startedPod).fromServer().get())) {
+		if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
 			Pod pod = kubeClient.resource(startedPod).fromServer().get();
 			container.getParameters().put(PARAM_POD, pod);
 			proxy.getContainers().add(container);
@@ -286,7 +280,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 					.map(p -> new ServicePortBuilder().withPort(p).build())
 					.collect(Collectors.toList());
 			
-			Service startupService = kubeClient.services().inNamespace(effectiveKubeNamespace).createNew()
+			Service startupService = new ServiceBuilder()
 					.withApiVersion(apiVersion)
 					.withKind("Service")
 					.withNewMetadata()
@@ -294,14 +288,15 @@ public class KubernetesBackend extends AbstractContainerBackend {
 						.addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
 						.addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
 						.addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
+						.addToLabels(spec.getLabels())
 					.endMetadata()
 					.withNewSpec()
 						.addToSelector("app", container.getId())
 						.withType("NodePort")
 						.withPorts(servicePorts)
 						.endSpec()
-					.done();
-
+					.build();
+			kubeClient.services().inNamespace(effectiveKubeNamespace).createOrReplace(startupService);
 			// Workaround: waitUntilReady appears to be buggy.
 			Retrying.retry(i -> isServiceReady(kubeClient.resource(startupService).fromServer().get()), 60, 1000);
 			
