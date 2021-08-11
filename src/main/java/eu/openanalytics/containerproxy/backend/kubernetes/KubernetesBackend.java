@@ -89,6 +89,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
 	@Inject
 	private PodPatcher podPatcher;
+
+	@Inject
+	private ProxyService proxyService;
 	
 	private KubernetesClient kubeClient;
 	
@@ -112,12 +115,20 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		}
 		
 		kubeClient = new DefaultKubernetesClient(configBuilder.build());
+
 		cleanBeforeStart();
+
+		Thread cleanFailedThread = new Thread(new ErrorPodsCleaner(), ErrorPodsCleaner.class.getSimpleName());
+		cleanFailedThread.setDaemon(true);
+		cleanFailedThread.start();
 	}
 
 	public void initialize(KubernetesClient client) {
 		super.initialize();
 		kubeClient = client;
+		Thread cleanFailedThread = new Thread(new ErrorPodsCleaner(), ErrorPodsCleaner.class.getSimpleName());
+		cleanFailedThread.setDaemon(true);
+		cleanFailedThread.start();
 	}
 
 	@Override
@@ -490,6 +501,42 @@ public class KubernetesBackend extends AbstractContainerBackend {
 				kubeClient.services().inNamespace(namespace).delete(service);
 			}
 			log.info("Cleaned " + orphanServices.getItems().size() + " services");
+		}
+	}
+
+	public PodList getFailedAndUnknownPods() {
+		String identifierLabel = environment.getProperty("proxy.identifier-label");
+		String identifierValue = environment.getProperty("proxy.identifier-value");
+		if (Strings.isNullOrEmpty(identifierLabel) || Strings.isNullOrEmpty(identifierValue)){
+			return null;
+		}
+		return kubeClient.pods().inAnyNamespace()
+				.withLabel(identifierLabel, identifierValue)
+				.withoutField("status.phase", "Pending")
+				.withoutField("status.phase", "Running")
+				.withoutField("status.phase", "Succeeded")
+				.list();
+	}
+
+	private class ErrorPodsCleaner implements Runnable {
+		@Override
+		public void run(){
+			log.info("Enable failed and unknown phase pods detection & cleaning");
+			while (true){
+				PodList failedPods = getFailedAndUnknownPods();
+				if (failedPods != null && !failedPods.getItems().isEmpty()){
+					for (Pod pod: failedPods.getItems()){
+						String proxyId = pod.getMetadata().getLabels().get("openanalytics.eu/sp-proxy-id");
+						proxyService.stopProxy(proxyService.getProxy(proxyId), true, true);
+						log.error("Cleaned error proxy {}", proxyId);
+					}
+				}
+				try {
+					Thread.sleep(30000);
+				} catch (Exception e){
+					log.error(e);
+				}
+			}
 		}
 	}
 }
