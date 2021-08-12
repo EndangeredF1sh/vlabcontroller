@@ -42,6 +42,7 @@ public class ProxySpec {
 	private String kubernetesPodPatches;
 	private List<String> kubernetesAdditionalManifests = new ArrayList<>();
 	private List<SubApplicationSpec> subApps;
+	private String defaultTutorialLink;
 
 	public ProxySpec() {
 		settings = new HashMap<>();
@@ -138,11 +139,20 @@ public class ProxySpec {
 		this.subApps = subApps;
 	}
 
+	public String getDefaultTutorialLink() {
+		return defaultTutorialLink;
+	}
+
+	public void setDefaultTutorialLink(String defaultTutorialLink) {
+		this.defaultTutorialLink = defaultTutorialLink;
+	}
+
 	public void copy(ProxySpec target) {
 		target.setId(id);
 		target.setDisplayName(displayName);
 		target.setDescription(description);
 		target.setLogoURL(logoURL);
+		target.setDefaultTutorialLink(defaultTutorialLink);
 		
 		if (accessControl != null) {
 			if (target.getAccessControl() == null) target.setAccessControl(new ProxyAccessControl());
