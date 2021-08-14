@@ -53,7 +53,7 @@ public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig{
         if (!Strings.isNullOrEmpty(role)){
             log.info("Enable allowed roles mode");
             http.authorizeRequests().antMatchers("/").anonymous();
-            http.authorizeRequests().antMatchers(uriArray).hasAnyRole("ADMINS", role.toUpperCase());
+            http.authorizeRequests().antMatchers(uriArray).hasAnyRole(role.toUpperCase());
         }
     }
 
