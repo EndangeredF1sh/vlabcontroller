@@ -423,7 +423,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	protected void doStopProxy(Proxy proxy) throws Exception {
 		// wait a bit to make sure there will be a pod to remove
 		// prevent orphan pods issue (start an app and sign out quickly)
-		int retry = 40;
+		int retry = 20;
 		int interval = 3000;
 		boolean responded = false;
 		for (int i=0; i<retry; i++){
