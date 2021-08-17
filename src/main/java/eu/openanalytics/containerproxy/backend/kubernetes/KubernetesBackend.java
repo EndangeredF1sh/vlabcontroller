@@ -140,7 +140,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		String kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
 		String namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
 		boolean uidNamespace = Boolean.valueOf(getProperty(PROPERTY_UID_NAMESPACE, "false"));
-		log.info("UserID Namespace Mode:" + uidNamespace);
+		log.debug("UserID Namespace Mode:" + uidNamespace);
 		if (uidNamespace){
 			kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : namespacePrefix + "-" + proxy.getUserId();
 		}
@@ -428,11 +428,11 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		boolean responded = false;
 		for (int i=0; i<retry; i++){
 			if (proxy.getContainers().isEmpty()) {
-				log.info("Proxy pod unresponsive, retrying ({}/{})", i+1, retry);
+				log.debug("Proxy pod unresponsive, retrying ({}/{})", i+1, retry);
 				Thread.sleep(interval);
 			}else{
 				responded = true;
-				log.info("Pod responded, removing...");
+				log.debug("Pod responded, removing...");
 				break;
 			}
 		}
