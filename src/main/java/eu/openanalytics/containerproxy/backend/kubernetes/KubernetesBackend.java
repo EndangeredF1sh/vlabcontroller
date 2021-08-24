@@ -261,7 +261,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		container.getParameters().put(PARAM_NAMESPACE, effectiveKubeNamespace);
 		
 		// create additional manifests -> use the effective (i.e. patched) namespace if no namespace is provided
-		createAdditionalManifstes(proxy, effectiveKubeNamespace);
+		createAdditionalManifests(proxy, effectiveKubeNamespace);
 		
 		Pod startedPod = kubeClient.pods().inNamespace(effectiveKubeNamespace).create(patchedPod);
 		
@@ -355,7 +355,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	 * 
 	 * The resource will only be created if it does not already exist.
 	 */
-	private void createAdditionalManifstes(Proxy proxy, String namespace) {
+	private void createAdditionalManifests(Proxy proxy, String namespace) {
 		for (HasMetadata fullObject: getAdditionManifestsAsObjects(proxy, namespace)) {
 			if (kubeClient.resource(fullObject).fromServer().get() == null) {
 				kubeClient.resource(fullObject).createOrReplace();
@@ -364,7 +364,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	}
 
 	/**
-	 * Converts the additional manifests of the spec into HasMetadat objects.
+	 * Converts the additional manifests of the spec into HasMetadata objects.
 	 * When the resource has no namespace definition, the provided namespace
 	 * parameter will be used.
 	 */
@@ -397,7 +397,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		if (service.getStatus().getLoadBalancer() == null) {
 			return false;
 		}
-		
+
 		return true;
 	}
 
