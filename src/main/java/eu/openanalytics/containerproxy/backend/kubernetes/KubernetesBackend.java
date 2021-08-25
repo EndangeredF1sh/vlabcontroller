@@ -358,6 +358,18 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	private void createAdditionalManifests(Proxy proxy, String namespace) {
 		for (HasMetadata fullObject: getAdditionManifestsAsObjects(proxy, namespace)) {
 			if (kubeClient.resource(fullObject).fromServer().get() == null) {
+				String identifierLabel = environment.getProperty("proxy.identifier-label");
+				String identifierValue = environment.getProperty("proxy.identifier-value");
+				if (!Strings.isNullOrEmpty(identifierLabel) && !Strings.isNullOrEmpty(identifierValue)){
+					ObjectMeta cache = fullObject.getMetadata();
+					Map<String, String> labels = cache.getLabels();
+					if (labels == null){
+						labels = new HashMap<>();
+					}
+					labels.put(identifierLabel, identifierValue);
+					cache.setLabels(labels);
+					fullObject.setMetadata(cache);
+				}
 				kubeClient.resource(fullObject).createOrReplace();
 			}
 		}
@@ -511,6 +523,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
 				kubeClient.services().inNamespace(namespace).delete(service);
 			}
 			log.info("Cleaned " + orphanServices.getItems().size() + " services");
+		}
+		PersistentVolumeClaimList orphanPVCs = kubeClient.persistentVolumeClaims().inAnyNamespace().withLabel(identifierLabel, identifierValue).list();
+		if (orphanPVCs != null){
+			for (PersistentVolumeClaim pvc: orphanPVCs.getItems()){
+				String namespace = pvc.getMetadata().getNamespace();
+				kubeClient.persistentVolumeClaims().inNamespace(namespace).delete(pvc);
+			}
+			log.info("Cleaned " + orphanPVCs.getItems().size() + " PersistentVolumeClaims");
 		}
 	}
 
