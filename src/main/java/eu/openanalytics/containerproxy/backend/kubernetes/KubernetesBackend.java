@@ -437,6 +437,16 @@ public class KubernetesBackend extends AbstractContainerBackend {
 			}
 		}
 		if (!responded){
+			String kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
+			String namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
+			if (Boolean.parseBoolean(getProperty(PROPERTY_UID_NAMESPACE, "false"))){
+				kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : namespacePrefix + "-" + proxy.getUserId();
+			}
+			// we have to delete additional manifests and services even though we can't find pod
+			for (HasMetadata fullObject: getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
+				kubeClient.resource(fullObject).delete();
+			}
+			kubeClient.services().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
 			throw new ContainerProxyException("Failed to stop container: no pod was founded");
 		}
 		for (Container container: proxy.getContainers()) {
