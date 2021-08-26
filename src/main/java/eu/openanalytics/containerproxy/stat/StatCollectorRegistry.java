@@ -20,17 +20,22 @@
  */
 package eu.openanalytics.containerproxy.stat;
 
+import eu.openanalytics.containerproxy.spec.StatCollectorProperties;
 import eu.openanalytics.containerproxy.stat.impl.InfluxDBCollector;
 import eu.openanalytics.containerproxy.stat.impl.JDBCCollector;
 import eu.openanalytics.containerproxy.stat.impl.Micrometer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
 import javax.inject.Inject;
+import java.util.function.Consumer;
 
 @Configuration
 class StatCollectorFactory {
@@ -43,25 +48,39 @@ class StatCollectorFactory {
 	@Inject
 	private ApplicationContext applicationContext;
 
+	@Inject
+	private StatCollectorProperties statCollectorProperties;
+
 	@Bean
 	public IStatCollector statsCollector() {
-		String baseURL = environment.getProperty("proxy.usage-stats-url");
-		if (baseURL == null || baseURL.isEmpty()) {
+		// create beans manually, spring will not create beans automatically when null returned
+		if (!statCollectorProperties.backendExists()) {
 			log.info("Disabled. Usage statistics will not be processed.");
 			return null;
 		}
 
-		log.info(String.format("Enabled. Sending usage statistics to %s.", baseURL));
+		ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
+		DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getAutowireCapableBeanFactory();
 
-		if (baseURL.toLowerCase().contains("/write?db=")) {
-			return applicationContext.getAutowireCapableBeanFactory().createBean(InfluxDBCollector.class);
-		} else if (baseURL.toLowerCase().startsWith("jdbc")) {
-			return applicationContext.getAutowireCapableBeanFactory().createBean(JDBCCollector.class);
-		} else if (baseURL.equalsIgnoreCase("micrometer")) {
-			return applicationContext.getAutowireCapableBeanFactory().createBean(Micrometer.class);
-		} else {
-			throw new IllegalArgumentException(String.format("Base url for statistics contains an unrecognized values, baseURL %s.", baseURL));
+		Consumer<Class<?>> createBean = (Class<?> klass) -> {
+			BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(klass);
+			defaultListableBeanFactory.registerBeanDefinition(klass.getName()+"Bean", beanDefinitionBuilder.getBeanDefinition());
+		};
+
+		if (statCollectorProperties.getInfluxURL().contains("/write?db=")) {
+			createBean.accept(InfluxDBCollector.class);
+			log.info("Influx DB backend enabled, sending usage statics to {}", statCollectorProperties.getInfluxURL());
 		}
+		if (statCollectorProperties.getJdbcURL().contains("jdbc")) {
+			createBean.accept(JDBCCollector.class);
+			log.info("JDBC backend enabled, sending usage statistics to {}", statCollectorProperties.getJdbcURL());
+
+		}
+		if (statCollectorProperties.getMicrometerURL().contains("micrometer")) {
+			createBean.accept(Micrometer.class);
+			log.info("Prometheus (Micrometer) backend enabled");
+		}
+
+		return null;
 	}
-	
 }

@@ -27,11 +27,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Optional;
 
-import eu.openanalytics.containerproxy.event.*;
 import org.apache.commons.io.IOUtils;
-
-import eu.openanalytics.containerproxy.stat.IStatCollector;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
@@ -48,7 +44,7 @@ public class InfluxDBCollector extends AbstractDbCollector {
 
 	@PostConstruct
 	public void init() {
-		destination = environment.getProperty("proxy.usage-stats-url");
+		destination = environment.getProperty("proxy.usage-stats-url.influx-url");
 	}
 
 	@Inject

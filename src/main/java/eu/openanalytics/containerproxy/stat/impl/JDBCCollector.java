@@ -64,7 +64,7 @@ public class JDBCCollector extends AbstractDbCollector {
 
 	@PostConstruct
 	public void init() {
-		String baseURL = environment.getProperty("proxy.usage-stats-url");
+		String baseURL = environment.getProperty("proxy.usage-stats-url.jdbc-url");
 		String username = environment.getProperty("proxy.usage-stats-username", "monetdb");
 		String password = environment.getProperty("proxy.usage-stats-password", "monetdb");
 		ds = new HikariDataSource();
