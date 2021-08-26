@@ -139,6 +139,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 		
 		String kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
 		String namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
+		String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+		String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
 		boolean uidNamespace = Boolean.valueOf(getProperty(PROPERTY_UID_NAMESPACE, "false"));
 		log.debug("UserID Namespace Mode:" + uidNamespace);
 		if (uidNamespace){
@@ -227,6 +229,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 				.withNamespace(kubeNamespace)
 				.withName("sp-pod-" + container.getId())
 				.addToLabels(spec.getLabels())
+				.addToLabels(identifierLabel, identifierValue)
 				.addToLabels("app", container.getId());
 
 		for (Map.Entry<String, Pair<Boolean, String>> runtimeLabel : spec.getRuntimeLabels().entrySet()) {
@@ -299,6 +302,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 						.addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
 						.addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
 						.addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
+						.addToLabels(identifierLabel, identifierValue)
 						.addToLabels(spec.getLabels())
 					.endMetadata()
 					.withNewSpec()
@@ -358,18 +362,16 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	private void createAdditionalManifests(Proxy proxy, String namespace) {
 		for (HasMetadata fullObject: getAdditionManifestsAsObjects(proxy, namespace)) {
 			if (kubeClient.resource(fullObject).fromServer().get() == null) {
-				String identifierLabel = environment.getProperty("proxy.identifier-label");
-				String identifierValue = environment.getProperty("proxy.identifier-value");
-				if (!Strings.isNullOrEmpty(identifierLabel) && !Strings.isNullOrEmpty(identifierValue)){
-					ObjectMeta cache = fullObject.getMetadata();
-					Map<String, String> labels = cache.getLabels();
-					if (labels == null){
-						labels = new HashMap<>();
-					}
-					labels.put(identifierLabel, identifierValue);
-					cache.setLabels(labels);
-					fullObject.setMetadata(cache);
+				String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+				String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
+				ObjectMeta cache = fullObject.getMetadata();
+				Map<String, String> labels = cache.getLabels();
+				if (labels == null){
+					labels = new HashMap<>();
 				}
+				labels.put(identifierLabel, identifierValue);
+				cache.setLabels(labels);
+				fullObject.setMetadata(cache);
 				kubeClient.resource(fullObject).createOrReplace();
 			}
 		}
@@ -503,11 +505,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	}
 	
 	public void cleanBeforeStart() {
-		String identifierLabel = environment.getProperty("proxy.identifier-label");
-		String identifierValue = environment.getProperty("proxy.identifier-value");
-		if (Strings.isNullOrEmpty(identifierLabel) || Strings.isNullOrEmpty(identifierValue)){
-			return;
-		}
+		String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+		String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
 		PodList orphanPods = kubeClient.pods().inAnyNamespace().withLabel(identifierLabel, identifierValue).list();
 		if (orphanPods != null){
 			for (Pod pod: orphanPods.getItems()){
@@ -535,11 +534,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 	}
 
 	public PodList getFailedAndUnknownPods() {
-		String identifierLabel = environment.getProperty("proxy.identifier-label");
-		String identifierValue = environment.getProperty("proxy.identifier-value");
-		if (Strings.isNullOrEmpty(identifierLabel) || Strings.isNullOrEmpty(identifierValue)){
-			return null;
-		}
+		String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+		String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
 		return kubeClient.pods().inAnyNamespace()
 				.withLabel(identifierLabel, identifierValue)
 				.withoutField("status.phase", "Pending")
