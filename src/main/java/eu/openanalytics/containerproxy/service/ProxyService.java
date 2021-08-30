@@ -286,4 +286,41 @@ public class ProxyService {
 		}
 	}
 
+
+	/**
+	 * Stop a running proxy, overloaded for idle silence offset
+	 *
+	 * @param proxy The proxy to stop.
+	 * @param async True to return immediately and stop the proxy in an asynchronous manner.
+	 * @param ignoreAccessControl True to allow access to any proxy, regardless of the current security context.
+	 * @param silenceOffset Milliseconds to subtract idle silence period, report accurate usage time.
+	 */
+	public void stopProxy(Proxy proxy, boolean async, boolean ignoreAccessControl, long silenceOffset) {
+		if (!ignoreAccessControl && !userService.isAdmin() && !userService.isOwner(proxy)) {
+			throw new AccessDeniedException(String.format("Cannot stop proxy %s: access denied", proxy.getId()));
+		}
+
+		activeProxies.remove(proxy);
+
+		Runnable releaser = () -> {
+			try {
+				backend.stopProxy(proxy);
+				logService.detach(proxy);
+				log.info(String.format("Proxy released [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId()));
+				if (proxy.getStartupTimestamp() > 0){
+					applicationEventPublisher.publishEvent(new ProxyStopEvent(this, proxy.getUserId(),
+							proxy.getSpec().getId(),
+							Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp() - silenceOffset)));
+				}
+			} catch (Exception e){
+				log.error("Failed to release proxy " + proxy.getId(), e);
+			}
+		};
+		if (async) containerKiller.submit(releaser);
+		else releaser.run();
+
+		for (Entry<String, URI> target: proxy.getTargets().entrySet()) {
+			mappingManager.removeMapping(target.getKey());
+		}
+	}
 }

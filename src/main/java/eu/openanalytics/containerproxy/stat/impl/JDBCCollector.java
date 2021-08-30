@@ -100,14 +100,17 @@ public class JDBCCollector extends AbstractDbCollector {
 	}
 
 	@Override
-	protected void writeToDb(long timestamp, String userId, String type, String data) throws IOException {
-		String sql = "INSERT INTO event(event_time, username, type, data) VALUES (?,?,?,?)";
+	protected void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException {
+		String identifier = environment.getProperty("proxy.identifier-value", "default-identifier");
+		String sql = "INSERT INTO event(event_time, username, type, specid, identifier, info) VALUES (?,?,?,?,?,?)";
 		try (Connection con = ds.getConnection()) {
 			try (PreparedStatement stmt = con.prepareStatement(sql)) {
 				stmt.setTimestamp(1, new Timestamp(timestamp));
 				stmt.setString(2, userId);
 				stmt.setString(3, type);
-				stmt.setString(4, data);
+				stmt.setString(4, specId);
+				stmt.setString(5, identifier);
+				stmt.setString(6, info);
 				stmt.executeUpdate();
 		   }
 		} catch (SQLException e) {

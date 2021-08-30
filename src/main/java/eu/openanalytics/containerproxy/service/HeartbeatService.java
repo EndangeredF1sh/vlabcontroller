@@ -289,11 +289,11 @@ public class HeartbeatService {
 											proxy.getUserId(),
 											proxy.getSpec().getId(),
 											proxy.getId(),
-											isPureHttp ? proxySilence : cleanupInterval * heartbeatStatus.getTerminateCounter());
+											silence);
 
 									proxyHeartbeats.remove(proxy.getId());
 									websocketHeartbeats.remove(proxy.getId());
-									proxyService.stopProxy(proxy, true, true);
+									proxyService.stopProxy(proxy, true, true, silence);
 								}
 								log.debug("proxy {} received HTTP requests {} ms ago, threshold={} ms", proxy.getId(), proxySilence, heartbeatTimeout);
 							}
