@@ -283,6 +283,7 @@ public class HeartbeatService {
 								if (lastHeartbeat == null) lastHeartbeat = proxy.getStartupTimestamp();
 								long proxySilence = currentTimestamp - lastHeartbeat;
 								if ((proxySilence > heartbeatTimeout) && (isPureHttp | isIdled)) {
+									long silence = isPureHttp ? proxySilence : cleanupInterval * (heartbeatStatus.getTerminateCounter() - 1);
 									log.info("Releasing {} proxy [user: {}] [spec: {}] [id: {}] [silence: {}ms]",
 											isPureHttp ? "inactive" : "idled",
 											proxy.getUserId(),
