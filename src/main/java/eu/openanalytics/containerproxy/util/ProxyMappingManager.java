@@ -23,6 +23,7 @@ package eu.openanalytics.containerproxy.util;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,12 +58,14 @@ import io.undertow.util.PathMatcher;
 public class ProxyMappingManager {
 
 	private static final String PROXY_INTERNAL_ENDPOINT = "/proxy_endpoint";
+	private static final String PROXY_PORT_MAPPINGS_ENDPOINT = "/port_mappings";
 	private static final AttachmentKey<ProxyMappingManager> ATTACHMENT_KEY_DISPATCHER = AttachmentKey.create(ProxyMappingManager.class);
 	
 	private PathHandler pathHandler;
-	
-	private Map<String, String> mappings = new HashMap<>();
-	
+
+	private final Map<String, String> mappings = new HashMap<>();
+	private final Map<String, URI> defaultTargetMappings = new HashMap<>();
+
 	@Inject
 	private HeartbeatService heartbeatService;
 	
@@ -76,7 +79,8 @@ public class ProxyMappingManager {
 	@SuppressWarnings("deprecation")
 	public synchronized void addMapping(String proxyId, String mapping, URI target) {
 		if (pathHandler == null) throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
-		
+		if (mappings.get(mapping) != null) return;
+
 		LoadBalancingProxyClient proxyClient = new LoadBalancingProxyClient() {
 			@Override
 			public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
@@ -92,7 +96,8 @@ public class ProxyMappingManager {
 		proxyClient.addHost(target);
 
 		mappings.put(mapping, proxyId);
-		
+		defaultTargetMappings.computeIfAbsent(proxyId, key -> target);
+
 		String path = PROXY_INTERNAL_ENDPOINT + "/" + mapping;
 		pathHandler.addPrefixPath(path, new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404));
 	}
@@ -132,7 +137,42 @@ public class ProxyMappingManager {
 		String queryString = request.getQueryString();
 		queryString = (queryString == null) ? "" : "?" + queryString;
 		String targetPath = PROXY_INTERNAL_ENDPOINT + "/" + mapping + queryString;
-		
+
+		request.startAsync();
+		request.getRequestDispatcher(targetPath).forward(request, response);
+	}
+
+	/**
+	 * Dispatch a request to a port-mapping target (customized port).
+	 * Create target before dispatching a request.
+	 * e.g: create port-mapping target
+	 * /proxy_endpoint/6480d0f4-d5c1-4bfd-9d73-d9c92f4f1e42/port_mappings/8080/path?query=value -> 10.42.23.100:8080/path?query=value
+	 *
+	 * Note that clients should create port-mappings when they are using docker backends.
+	 * Dispatching is the only allowed method to access proxy handlers.
+	 *
+	 * @param proxyId The target's proxy ID.
+	 * @param mapping The target mapping to dispatch to.
+	 * @param port The corresponding port for new target.
+	 * @param request The request to dispatch.
+	 * @param response The response corresponding to the request.
+	 * @throws IOException If the dispatch fails for an I/O reason.
+	 * @throws ServletException If the dispatch fails for any other reason.
+	 * @throws URISyntaxException If URI syntax is not allowed.
+	 */
+	public void dispatchAsync(String proxyId, String mapping, int port, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException, URISyntaxException {
+		HttpServerExchange exchange = ServletRequestContext.current().getExchange();
+		exchange.putAttachment(ATTACHMENT_KEY_DISPATCHER, this);
+
+		URI defaultTarget = defaultTargetMappings.get(proxyId);
+		String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
+		URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
+		addMapping(proxyId, port_mapping, newTarget);
+
+		String queryString = request.getQueryString();
+		queryString = (queryString == null) ? "" : "?" + queryString;
+		String targetPath = PROXY_INTERNAL_ENDPOINT + "/" + port_mapping + mapping + queryString;
+
 		request.startAsync();
 		request.getRequestDispatcher(targetPath).forward(request, response);
 	}
