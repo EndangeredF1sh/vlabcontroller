@@ -105,7 +105,7 @@ public class ProxyMappingManager {
 	public synchronized void removeMapping(String mapping) {
 		if (pathHandler == null) throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
 		mappings.remove(mapping);
-		pathHandler.removePrefixPath(mapping);
+		pathHandler.removePrefixPath(PROXY_INTERNAL_ENDPOINT + "/" + mapping);
 	}
 
 	public String getProxyId(String mapping) {
