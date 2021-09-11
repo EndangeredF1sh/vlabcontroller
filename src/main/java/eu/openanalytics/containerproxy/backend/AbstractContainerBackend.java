@@ -164,13 +164,9 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
 				spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
 			}
 			spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
-			String[] groups = userService.getGroups(userService.getCurrentAuth());
-			if (unsafeLabel){
-				spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, true, String.join(".", groups));
-			}else{
-				spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
-			}
 			spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
+			String[] groups = userService.getGroups(userService.getCurrentAuth());
+			spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
 
 			ExpressionAwareContainerSpec eSpec = new ExpressionAwareContainerSpec(spec, proxy, expressionResolver);
 			Container c = startContainer(eSpec, proxy);
