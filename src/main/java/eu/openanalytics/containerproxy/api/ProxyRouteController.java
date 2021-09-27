@@ -24,9 +24,10 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.service.ProxyService;
@@ -34,7 +35,7 @@ import eu.openanalytics.containerproxy.service.UserService;
 import eu.openanalytics.containerproxy.util.ProxyMappingManager;
 import eu.openanalytics.containerproxy.util.SessionHelper;
 
-@RestController
+@Controller
 public class ProxyRouteController extends BaseController {
 
 	@Inject
@@ -48,25 +49,48 @@ public class ProxyRouteController extends BaseController {
 	
 	@Inject
 	private Environment environment;
-	
+
 	@RequestMapping(value="/api/route/**")
 	public void route(HttpServletRequest request, HttpServletResponse response) {
 		try {
-			// Ensure that the caller is the owner of the target proxy.
-			boolean hasAccess = false;
 			String baseURL = SessionHelper.getContextPath(environment, true) + "api/route/";
-			String mapping = request.getRequestURI().substring(baseURL.length());
+			String mapping = request.getRequestURI().substring(baseURL.length()).replaceAll("/{2,}", "/");
 			String proxyId = mappingManager.getProxyId(mapping);
+			String prefix = proxyId;
 			if (proxyId != null) {
 				Proxy proxy = proxyService.findProxy(p -> proxyId.equals(p.getId()), false);
-				hasAccess = userService.isOwner(proxy);
-			}
-			
-			if (hasAccess) {
-				mappingManager.dispatchAsync(mapping, request, response);
+				String[] path = mapping.split("/");
+				String mappingType = path.length > 1 ? path[1] : "";
+				int targetPort = -1;
+				boolean hasAccess = userService.isOwner(proxy);
+				if (("/" + mappingType).equals(mappingManager.getProxyPortMappingsEndpoint())){
+					String portString = path[2];
+					if (portString != null){
+						int port = Integer.parseInt(portString);
+						if (port < 0 || port > 65535) {
+							response.sendError(404, "Invalid port");
+						}else{
+							prefix = prefix + "/" + mappingType + "/" + portString;
+							targetPort = port;
+						}
+					}
+				}
+				if (hasAccess) {
+					String subPath = StringUtils.substringAfter(mapping, prefix);
+					if (subPath.trim().isEmpty()){
+						response.sendRedirect(request.getRequestURI() + "/");
+						return;
+					}
+					if (targetPort >= 0){
+						mappingManager.dispatchAsync(proxy, subPath, targetPort, request, response);
+					} else {
+						mappingManager.dispatchAsync(mapping, request, response);
+					}
+				} else {
+					response.sendError(403);
+				}
 			} else {
-				response.setStatus(403);
-				response.getWriter().write("Not authorized to access this proxy");
+				response.sendError(404, "Proxy is not existed");
 			}
 		} catch (Exception e) {
 			throw new RuntimeException("Error routing proxy request", e);

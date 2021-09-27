@@ -22,9 +22,12 @@ package eu.openanalytics.containerproxy.util;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,8 +38,11 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
+import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.service.HeartbeatService;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -68,6 +74,8 @@ public class ProxyMappingManager {
 
 	@Inject
 	private HeartbeatService heartbeatService;
+
+	private final Logger log = LogManager.getLogger(ProxyMappingManager.class);
 	
 	public synchronized HttpHandler createHttpHandler(HttpHandler defaultHandler) {
 		if (pathHandler == null) {
@@ -87,7 +95,7 @@ public class ProxyMappingManager {
 				try {
 					exchange.addResponseCommitListener(ex -> heartbeatService.attachHeartbeatChecker(ex, proxyId));
 				} catch (Exception e) {
-					e.printStackTrace();
+					log.error(e);
 				}
 				super.getConnection(target, exchange, callback, timeout, timeUnit);
 			}
@@ -104,7 +112,8 @@ public class ProxyMappingManager {
 
 	public synchronized void removeMapping(String mapping) {
 		if (pathHandler == null) throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
-		mappings.remove(mapping);
+		String proxyId = mappings.remove(mapping);
+		defaultTargetMappings.remove(proxyId);
 		pathHandler.removePrefixPath(PROXY_INTERNAL_ENDPOINT + "/" + mapping);
 	}
 
@@ -113,6 +122,10 @@ public class ProxyMappingManager {
 			if (mapping.toLowerCase().startsWith(e.getKey().toLowerCase())) return e.getValue();
 		}
 		return null;
+	}
+
+	public String getProxyPortMappingsEndpoint(){
+		return PROXY_PORT_MAPPINGS_ENDPOINT;
 	}
 
 	/**
@@ -151,7 +164,7 @@ public class ProxyMappingManager {
 	 * Note that clients should create port-mappings when they are using docker backends.
 	 * Dispatching is the only allowed method to access proxy handlers.
 	 *
-	 * @param proxyId The target's proxy ID.
+	 * @param proxy The target's proxy.
 	 * @param mapping The target mapping to dispatch to.
 	 * @param port The corresponding port for new target.
 	 * @param request The request to dispatch.
@@ -160,19 +173,39 @@ public class ProxyMappingManager {
 	 * @throws ServletException If the dispatch fails for any other reason.
 	 * @throws URISyntaxException If URI syntax is not allowed.
 	 */
-	public void dispatchAsync(String proxyId, String mapping, int port, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException, URISyntaxException {
+	public void dispatchAsync(Proxy proxy, String mapping, int port, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException, URISyntaxException {
 		HttpServerExchange exchange = ServletRequestContext.current().getExchange();
 		exchange.putAttachment(ATTACHMENT_KEY_DISPATCHER, this);
 
+		String proxyId = proxy.getId();
 		URI defaultTarget = defaultTargetMappings.get(proxyId);
 		String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
 		URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
+
+		boolean targetConnected = Retrying.retry(i -> {
+			try{
+				URL testURL = newTarget.toURL();
+				HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
+				connection.setConnectTimeout(5000);
+				connection.setInstanceFollowRedirects(false);
+				int responseCode = connection.getResponseCode();
+				if (Arrays.asList(200, 301, 302, 303, 307, 308).contains(responseCode)) return true;
+			}catch (Exception e){
+				log.debug("Trying to connect target URL ({}/{})", i, 5);
+			}
+			return false;
+		}, 5, 2000, true);
+
+		if (!targetConnected) {
+			response.sendError(404);
+			return;
+		}
 		addMapping(proxyId, port_mapping, newTarget);
+		proxy.getTargets().put(port_mapping, newTarget);
 
 		String queryString = request.getQueryString();
 		queryString = (queryString == null) ? "" : "?" + queryString;
 		String targetPath = PROXY_INTERNAL_ENDPOINT + "/" + port_mapping + mapping + queryString;
-
 		request.startAsync();
 		request.getRequestDispatcher(targetPath).forward(request, response);
 	}
