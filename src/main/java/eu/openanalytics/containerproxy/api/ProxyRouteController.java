@@ -58,12 +58,13 @@ public class ProxyRouteController extends BaseController {
 			String proxyId = mappingManager.getProxyId(mapping);
 			String prefix = proxyId;
 			if (proxyId != null) {
-				Proxy proxy = proxyService.findProxy(p -> proxyId.equals(p.getId()), false);
+				boolean isAdmin = userService.isAdmin();
+				Proxy proxy = proxyService.findProxy(p -> proxyId.equals(p.getId()), true);
 				String[] path = mapping.split("/");
 				String mappingType = path.length > 1 ? path[1] : "";
 				int targetPort = -1;
 				boolean hasAccess = userService.isOwner(proxy);
-				if (("/" + mappingType).equals(mappingManager.getProxyPortMappingsEndpoint())){
+				if (("/" + mappingType).equals(mappingManager.getProxyPortMappingsEndpoint())) {
 					String portString = path[2];
 					if (portString != null){
 						int port = Integer.parseInt(portString);
@@ -75,7 +76,7 @@ public class ProxyRouteController extends BaseController {
 						}
 					}
 				}
-				if (hasAccess) {
+				if (hasAccess || isAdmin) {
 					String subPath = StringUtils.substringAfter(mapping, prefix);
 					if (subPath.trim().isEmpty()){
 						response.sendRedirect(request.getRequestURI() + "/");
