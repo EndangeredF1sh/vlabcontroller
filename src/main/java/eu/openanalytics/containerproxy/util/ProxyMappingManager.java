@@ -184,7 +184,8 @@ public class ProxyMappingManager {
 
 		boolean targetConnected = Retrying.retry(i -> {
 			try{
-				URL testURL = newTarget.toURL();
+				String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
+				URL testURL = new URL(newTarget + mapping + query);
 				HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
 				connection.setConnectTimeout(5000);
 				connection.setInstanceFollowRedirects(false);
