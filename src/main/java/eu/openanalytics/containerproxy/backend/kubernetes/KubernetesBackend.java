@@ -317,7 +317,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
   }
   
   private JsonPatch readPatchFromSpec(ContainerSpec containerSpec, Proxy proxy) throws JsonProcessingException {
-    String patchAsString = proxy.getSpec().getKubernetesPodPatch();
+    String patchAsString = proxy.getSpec().getKubernetesPodPatches();
     if (patchAsString == null) {
       return null;
     }

@@ -1,6 +1,8 @@
 package eu.openanalytics.containerproxy.model.runtime;
 
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -9,88 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 public class Proxy {
-  
-  private String id;
-  
-  private ProxySpec spec;
-  
-  private ProxyStatus status;
-  
-  private long startupTimestamp;
-  private long createdTimestamp;
-  private String userId;
-  private String namespace;
-  
-  private List<Container> containers;
-  private Map<String, URI> targets;
-  
-  public Proxy() {
-    containers = new ArrayList<>();
-    targets = new HashMap<>();
-  }
-  
-  public String getId() {
-    return id;
-  }
-  
-  public void setId(String id) {
-    this.id = id;
-  }
-  
-  public ProxySpec getSpec() {
-    return spec;
-  }
-  
-  public void setSpec(ProxySpec spec) {
-    this.spec = spec;
-  }
-  
-  public ProxyStatus getStatus() {
-    return status;
-  }
-  
-  public void setStatus(ProxyStatus status) {
-    this.status = status;
-  }
-  
-  public long getStartupTimestamp() {
-    return startupTimestamp;
-  }
-  
-  public void setStartupTimestamp(long startupTimestamp) {
-    this.startupTimestamp = startupTimestamp;
-  }
-  
-  public long getCreatedTimestamp() {
-    return createdTimestamp;
-  }
-  
-  public void setCreatedTimestamp(long createdTimestamp) {
-    this.createdTimestamp = createdTimestamp;
-  }
-  
-  public String getUserId() {
-    return userId;
-  }
-  
-  public void setUserId(String userId) {
-    this.userId = userId;
-  }
-  
-  public List<Container> getContainers() {
-    return containers;
-  }
-  
-  public void setContainers(List<Container> containers) {
-    this.containers = containers;
-  }
-  
-  public Map<String, URI> getTargets() {
-    return targets;
-  }
-  
-  public void setTargets(Map<String, URI> targets) {
-    this.targets = targets;
-  }
-  
+  @Getter @Setter private String id;
+  @Getter @Setter private ProxySpec spec;
+  @Getter @Setter private ProxyStatus status;
+  @Getter @Setter private long startupTimestamp;
+  @Getter @Setter private long createdTimestamp;
+  @Getter @Setter private String userId;
+  @Getter @Setter private String namespace;
+  @Getter @Setter private List<Container> containers = new ArrayList<>();
+  @Getter @Setter private Map<String, URI> targets = new HashMap<>();
 }

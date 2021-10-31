@@ -1,37 +1,15 @@
 package eu.openanalytics.containerproxy.model.spec;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class RuntimeSettingSpec {
-  
-  private String name;
-  private String type;
-  private Map<String, Object> config;
-  
-  public String getName() {
-    return name;
-  }
-  
-  public void setName(String name) {
-    this.name = name;
-  }
-  
-  public String getType() {
-    return type;
-  }
-  
-  public void setType(String type) {
-    this.type = type;
-  }
-  
-  public Map<String, Object> getConfig() {
-    return config;
-  }
-  
-  public void setConfig(Map<String, Object> config) {
-    this.config = config;
-  }
+  @Getter @Setter private String name;
+  @Getter @Setter private String type;
+  @Getter @Setter private Map<String, Object> config;
   
   public void copy(RuntimeSettingSpec target) {
     target.setName(name);

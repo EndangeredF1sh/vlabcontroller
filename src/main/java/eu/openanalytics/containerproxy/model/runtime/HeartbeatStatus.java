@@ -1,42 +1,21 @@
 package eu.openanalytics.containerproxy.model.runtime;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class HeartbeatStatus {
-  private long startRecordTimestamp;
-  private long lastRecordTimestamp;
-  private int totalPayloadLength;
-  private int terminateCounter;
+  @Getter private long startRecordTimestamp;
+  @Getter @Setter private long lastRecordTimestamp;
+  @Getter @Setter private int totalPayloadLength;
+  @Getter private int terminateCounter;
   
   public HeartbeatStatus() {
     this.startRecordTimestamp = System.currentTimeMillis();
     this.lastRecordTimestamp = this.startRecordTimestamp;
   }
   
-  public long getStartRecordTimestamp() {
-    return startRecordTimestamp;
-  }
-  
-  public long getLastRecordTimestamp() {
-    return lastRecordTimestamp;
-  }
-  
-  public void setLastRecordTimestamp(long lastRecordTimestamp) {
-    this.lastRecordTimestamp = lastRecordTimestamp;
-  }
-  
-  public int getTotalPayloadLength() {
-    return totalPayloadLength;
-  }
-  
-  public void setTotalPayloadLength(int totalPayloadLength) {
-    this.totalPayloadLength = totalPayloadLength;
-  }
-  
   public void increaseCounter() {
     terminateCounter++;
-  }
-  
-  public int getTerminateCounter() {
-    return terminateCounter;
   }
   
   public void clearAll() {
