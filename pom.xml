@@ -298,10 +298,6 @@
                 </plugin>
                 <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
                 <plugin>
-                    <artifactId>maven-resources-plugin</artifactId>
-                    <version>3.0.2</version>
-                </plugin>
-                <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.8.0</version>
                 </plugin>
@@ -338,12 +334,41 @@
                 <artifactId>jib-maven-plugin</artifactId>
                 <version>3.1.4</version>
                 <configuration>
-                    <to>
-                        <image>myimage</image>
-                    </to>
                     <from>
-                        <image>adoptopenjdk/openjdk11:jre-11.0.11_9-alpine</image>
+                        <image>ghcr.io/stevefan1999/vlab-controller-base</image>
                     </from>
+                    <to>
+                        <image>ghcr.io/stevefan1999/vlab-controller</image>
+                        <auth>
+                            <username>${env.REGISTRY_USERNAME}</username>
+                            <password>${env.REGISTRY_PASSWORD}</password>
+                        </auth>
+                    </to>
+                    <container>
+                        <appRoot>/opt/shinyproxy</appRoot>
+                        <workingDirectory>/opt/shinyproxy</workingDirectory>
+                        <environment>
+                            <SHINY_USER>shinyproxy</SHINY_USER>
+                            <PROXY_TEMPLATEPATH>/opt/shinyproxy/resources/templates</PROXY_TEMPLATEPATH>
+                            <SERVER_ERROR_WHITELABEL_ENABLED>false</SERVER_ERROR_WHITELABEL_ENABLED>
+                            <TZ>Asia/Hong_Kong</TZ>
+                        </environment>
+                        <labels>
+                            <maintainer>Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com></maintainer>
+                        </labels>
+                        <user>shinyproxy:shinyproxy</user>
+                        <args>
+                            <arg>--spring.jmx.enabled=false</arg>
+                        </args>
+                    </container>
+                    <extraDirectories>
+                        <paths>
+                            <path>
+                                <from>resources/templates</from>
+                                <into>/opt/shinyproxy/resources/templates</into>
+                            </path>
+                        </paths>
+                    </extraDirectories>
                 </configuration>
             </plugin>
 
