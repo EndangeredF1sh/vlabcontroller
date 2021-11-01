@@ -38,16 +38,18 @@ public class UserService {
   
   private final Logger log = LogManager.getLogger(UserService.class);
   private final Map<String, String> userInitiatedLogoutMap = new HashMap<>();
-  @Inject
-  private Environment environment;
-  @Inject
+  private final Environment environment;
+  private final IAuthenticationBackend authBackend;
+  private final IProxyLogoutStrategy logoutStrategy;
+  private final ApplicationEventPublisher applicationEventPublisher;
+  
   @Lazy
-  // Note: lazy needed to work around early initialization conflict
-  private IAuthenticationBackend authBackend;
-  @Inject
-  private IProxyLogoutStrategy logoutStrategy;
-  @Inject
-  private ApplicationEventPublisher applicationEventPublisher;
+  public UserService(Environment environment, IAuthenticationBackend authBackend, IProxyLogoutStrategy logoutStrategy, ApplicationEventPublisher applicationEventPublisher) {
+    this.environment = environment;
+    this.authBackend = authBackend;
+    this.logoutStrategy = logoutStrategy;
+    this.applicationEventPublisher = applicationEventPublisher;
+  }
   
   public Authentication getCurrentAuth() {
     return SecurityContextHolder.getContext().getAuthentication();

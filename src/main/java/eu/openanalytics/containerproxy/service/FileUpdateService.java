@@ -18,17 +18,19 @@ import java.security.NoSuchAlgorithmException;
 public class FileUpdateService extends Thread {
   protected final Logger log = LogManager.getLogger(getClass());
   
-  @Autowired
-  private ConfigFileHelper configFileHelper;
-  
-  @Autowired
-  private ApplicationEventPublisher publisher;
+  private final ConfigFileHelper configFileHelper;
+  private final ApplicationEventPublisher publisher;
   
   @Value("${proxy.config.interval:5000}")
   private int interval;
   
   @Value("${proxy.config.auto-update:true}")
   private boolean configAutoUpdate;
+  
+  public FileUpdateService(ConfigFileHelper configFileHelper, ApplicationEventPublisher publisher) {
+    this.configFileHelper = configFileHelper;
+    this.publisher = publisher;
+  }
   
   @PostConstruct
   public void start() {

@@ -16,18 +16,17 @@ import javax.servlet.http.HttpServletResponse;
 
 @Controller
 public class ProxyRouteController extends BaseController {
+  private final UserService userService;
+  private final ProxyService proxyService;
+  private final ProxyMappingManager mappingManager;
+  private final Environment environment;
   
-  @Inject
-  private UserService userService;
-  
-  @Inject
-  private ProxyService proxyService;
-  
-  @Inject
-  private ProxyMappingManager mappingManager;
-  
-  @Inject
-  private Environment environment;
+  public ProxyRouteController(UserService userService, ProxyService proxyService, ProxyMappingManager mappingManager, Environment environment) {
+    this.userService = userService;
+    this.proxyService = proxyService;
+    this.mappingManager = mappingManager;
+    this.environment = environment;
+  }
   
   @RequestMapping(value = "/api/route/**")
   public void route(HttpServletRequest request, HttpServletResponse response) {

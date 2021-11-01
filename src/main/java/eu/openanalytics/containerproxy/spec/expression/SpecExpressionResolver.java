@@ -42,11 +42,11 @@ public class SpecExpressionResolver {
     }
   };
   private final ExpressionParser expressionParser;
-  @Inject
-  private ApplicationContext appContext;
+  private final ApplicationContext appContext;
   
-  public SpecExpressionResolver() {
+  public SpecExpressionResolver(ApplicationContext appContext) {
     this.expressionParser = new SpelExpressionParser();
+    this.appContext = appContext;
   }
   
   public Object evaluate(String expression, SpecExpressionContext context) {

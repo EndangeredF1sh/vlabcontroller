@@ -57,14 +57,12 @@ public abstract class BaseController {
   private static final Map<String, String> imageCache = new HashMap<>();
 
   final ProxyService proxyService;
-
   final UserService userService;
-
   final Environment environment;
-
   final IAuthenticationBackend authenticationBackend;
   
-  protected BaseController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend) {
+  @Lazy
+  protected BaseController(ProxyService proxyService, UserService userService, Environment environment, IAuthenticationBackend authenticationBackend) {
     this.proxyService = proxyService;
     this.userService = userService;
     this.environment = environment;
@@ -73,8 +71,7 @@ public abstract class BaseController {
   
   protected String getUserName(HttpServletRequest request) {
     Principal principal = request.getUserPrincipal();
-    String username = (principal == null) ? request.getSession().getId() : principal.getName();
-    return username;
+    return (principal == null) ? request.getSession().getId() : principal.getName();
   }
   
   protected String getAppPort(HttpServletRequest request) {
@@ -92,8 +89,7 @@ public abstract class BaseController {
   
   protected String getAppName(String uri) {
     Matcher matcher = appPattern.matcher(uri);
-    String appName = matcher.matches() ? matcher.group(1) : null;
-    return appName;
+    return matcher.matches() ? matcher.group(1) : null;
   }
   
   protected String getAppTitle(HttpServletRequest request) {

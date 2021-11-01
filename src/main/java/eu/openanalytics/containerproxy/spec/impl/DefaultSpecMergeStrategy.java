@@ -16,9 +16,11 @@ import java.util.UUID;
  */
 @Component
 public class DefaultSpecMergeStrategy implements IProxySpecMergeStrategy {
+  private final SettingTypeRegistry settingTypeRegistry;
   
-  @Inject
-  private SettingTypeRegistry settingTypeRegistry;
+  public DefaultSpecMergeStrategy(SettingTypeRegistry settingTypeRegistry) {
+    this.settingTypeRegistry = settingTypeRegistry;
+  }
   
   @Override
   public ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException {

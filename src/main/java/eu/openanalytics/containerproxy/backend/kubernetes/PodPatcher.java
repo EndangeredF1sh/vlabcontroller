@@ -21,9 +21,12 @@ public class PodPatcher {
   private static final String DEBUG_PROPERTY = "proxy.kubernetes.debug-patches";
   private final ObjectMapper mapper = new ObjectMapper();
   private final Logger log = LogManager.getLogger(getClass());
-  @Inject
-  private Environment environment;
+  private final Environment environment;
   private boolean loggingEnabled = false;
+  
+  public PodPatcher(Environment environment) {
+    this.environment = environment;
+  }
   
   @PostConstruct
   public void init() {

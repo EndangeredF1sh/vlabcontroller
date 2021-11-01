@@ -47,14 +47,16 @@ public class HeartbeatService {
   
   private volatile boolean enabled;
   
-  @Inject
-  private ProxyService proxyService;
-  
-  @Inject
-  private Environment environment;
+  private final ProxyService proxyService;
+  private final Environment environment;
   
   @Resource
   private EngagementProperties engagementProperties;
+  
+  public HeartbeatService(ProxyService proxyService, Environment environment) {
+    this.proxyService = proxyService;
+    this.environment = environment;
+  }
   
   @PostConstruct
   public void init() {

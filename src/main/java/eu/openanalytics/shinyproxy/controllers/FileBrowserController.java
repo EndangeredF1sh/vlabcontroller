@@ -162,8 +162,8 @@ public class FileBrowserController extends BaseController {
   private String buildContainerPath(HttpServletRequest request) {
     String queryString = ServletUriComponentsBuilder.fromRequest(request).replaceQueryParam("sp_hide_navbar").build().getQuery();
     queryString = (queryString == null) ? "" : "?" + queryString;
-    Pattern containerPathPattern = Pattern.compile(".*?/filebrowser[/]*(.*)");
-    Matcher matcher = containerPathPattern.matcher(request.getRequestURI());
+    var containerPathPattern = Pattern.compile(".*?/filebrowser[/]*(.*)");
+    var matcher = containerPathPattern.matcher(request.getRequestURI());
     String containerPath = matcher.find() ? matcher.group(1) + queryString : queryString;
     return getContextPath() + "app_direct/filebrowser" + "/" + containerPath;
   }

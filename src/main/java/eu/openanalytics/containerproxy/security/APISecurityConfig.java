@@ -26,8 +26,11 @@ import java.util.Map;
 @EnableResourceServer
 public class APISecurityConfig extends ResourceServerConfigurerAdapter {
   
-  @Inject
-  private Environment environment;
+  private final Environment environment;
+  
+  public APISecurityConfig(Environment environment) {
+    this.environment = environment;
+  }
   
   @Override
   public void configure(HttpSecurity http) throws Exception {

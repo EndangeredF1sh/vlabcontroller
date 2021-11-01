@@ -11,18 +11,19 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 
 @Component
 @ConditionalOnProperty(prefix = "spring.session", name = "store-type", havingValue = "redis")
 public class RedisSessionProxyLogoutStrategy implements IProxyLogoutStrategy {
-  
   private final Logger log = LogManager.getLogger(RedisSessionProxyLogoutStrategy.class);
-  @Inject
-  private ProxyService proxyService;
-  @Inject
+  private final ProxyService proxyService;
+  private final RedisSessionHelper redisSessionHelper;
+  
   @Lazy
-  private RedisSessionHelper redisSessionHelper;
+  public RedisSessionProxyLogoutStrategy(ProxyService proxyService, RedisSessionHelper redisSessionHelper) {
+    this.proxyService = proxyService;
+    this.redisSessionHelper = redisSessionHelper;
+  }
   
   @PostConstruct
   private void init() {

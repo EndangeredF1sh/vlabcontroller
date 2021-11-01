@@ -19,8 +19,11 @@ import java.security.NoSuchAlgorithmException;
 
 @Component
 public class ConfigFileHelper {
-  @Autowired
-  private Environment environment;
+  private final Environment environment;
+  
+  public ConfigFileHelper(Environment environment) {
+    this.environment = environment;
+  }
   
   private File getConfigFile() {
     String path = environment.getProperty("spring.config.location");

@@ -11,12 +11,13 @@ import javax.inject.Inject;
 @Service(value = "logStorage")
 @Primary
 public class LogStorageFactory extends AbstractFactoryBean<ILogStorage> {
+  private final Environment environment;
+  private final ApplicationContext applicationContext;
   
-  @Inject
-  private Environment environment;
-  
-  @Inject
-  private ApplicationContext applicationContext;
+  public LogStorageFactory(Environment environment, ApplicationContext applicationContext) {
+    this.environment = environment;
+    this.applicationContext = applicationContext;
+  }
   
   @Override
   public Class<?> getObjectType() {

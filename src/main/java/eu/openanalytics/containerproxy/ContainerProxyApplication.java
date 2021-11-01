@@ -42,12 +42,15 @@ public class ContainerProxyApplication {
   public static final String CONFIG_FILENAME = "application.yml";
   public static final String CONFIG_DEMO_PROFILE = "demo";
   private final Logger log = LogManager.getLogger(getClass());
-  @Inject
-  private Environment environment;
-  @Inject
-  private ProxyMappingManager mappingManager;
-  @Inject
-  private DefaultCookieSerializer defaultCookieSerializer;
+  private final Environment environment;
+  private final ProxyMappingManager mappingManager;
+  private final DefaultCookieSerializer defaultCookieSerializer;
+  
+  public ContainerProxyApplication(Environment environment, ProxyMappingManager mappingManager, DefaultCookieSerializer defaultCookieSerializer) {
+    this.environment = environment;
+    this.mappingManager = mappingManager;
+    this.defaultCookieSerializer = defaultCookieSerializer;
+  }
   
   public static void main(String[] args) {
     SpringApplication app = new SpringApplication(ContainerProxyApplication.class);

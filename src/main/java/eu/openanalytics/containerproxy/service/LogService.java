@@ -22,12 +22,15 @@ public class LogService {
   
   private static final String PARAM_STREAMS = "streams";
   private final Logger log = LogManager.getLogger(LogService.class);
-  @Inject
-  Environment environment;
-  @Inject
-  ILogStorage logStorage;
+  final Environment environment;
+  final ILogStorage logStorage;
   private ExecutorService executor;
   private boolean loggingEnabled;
+  
+  public LogService(Environment environment, ILogStorage logStorage) {
+    this.environment = environment;
+    this.logStorage = logStorage;
+  }
   
   @PostConstruct
   public void init() {

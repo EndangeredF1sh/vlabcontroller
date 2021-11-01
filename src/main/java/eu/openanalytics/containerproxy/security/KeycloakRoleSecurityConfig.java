@@ -16,8 +16,11 @@ import javax.inject.Inject;
 public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig {
   private final Logger log = LogManager.getLogger(getClass());
   
-  @Inject
-  Environment environment;
+  final Environment environment;
+  
+  public KeycloakRoleSecurityConfig(Environment environment) {
+    this.environment = environment;
+  }
   
   @Override
   public void apply(WebSecurity web) throws Exception {

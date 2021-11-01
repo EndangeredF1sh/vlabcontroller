@@ -11,9 +11,11 @@ import javax.inject.Inject;
 
 @Configuration
 public class TemplateResolverConfig implements WebMvcConfigurer {
+  private final Environment environment;
   
-  @Inject
-  private Environment environment;
+  public TemplateResolverConfig(Environment environment) {
+    this.environment = environment;
+  }
   
   @Override
   public void addResourceHandlers(ResourceHandlerRegistry registry) {

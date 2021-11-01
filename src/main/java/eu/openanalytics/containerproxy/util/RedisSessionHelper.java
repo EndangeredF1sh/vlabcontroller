@@ -12,9 +12,11 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "spring.session", name = "store-type", havingValue = "redis")
 //using @EnableRedisHttpSession which will result in Spring Boot's auto-configuration backing off.
 public class RedisSessionHelper {
+  final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
   
-  @Autowired
-  FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+  public RedisSessionHelper(FindByIndexNameSessionRepository<? extends Session> sessionRepository) {
+    this.sessionRepository = sessionRepository;
+  }
   
   public Map getSessionByUsername(String username) {
     return sessionRepository.findByIndexNameAndIndexValue(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME, username);

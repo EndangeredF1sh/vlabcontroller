@@ -16,9 +16,12 @@ import javax.inject.Inject;
 public class ContainerBackendFactory extends AbstractFactoryBean<IContainerBackend> implements ApplicationContextAware {
   
   private static final String PROPERTY_CONTAINER_BACKEND = "proxy.container-backend";
-  @Inject
-  protected Environment environment;
+  protected final Environment environment;
   private ApplicationContext applicationContext;
+  
+  public ContainerBackendFactory(Environment environment) {
+    this.environment = environment;
+  }
   
   @Override
   public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -40,7 +43,6 @@ public class ContainerBackendFactory extends AbstractFactoryBean<IContainerBacke
   }
   
   private enum ContainerBackend {
-    
     DockerEngine("docker", DockerEngineBackend.class),
     DockerSwarm("docker-swarm", DockerSwarmBackend.class),
     Kubernetes("kubernetes", KubernetesBackend.class);

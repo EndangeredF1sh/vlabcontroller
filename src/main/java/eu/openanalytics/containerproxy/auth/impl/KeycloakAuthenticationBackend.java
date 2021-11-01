@@ -45,7 +45,6 @@ import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.stereotype.Component;
 
-import javax.inject.Inject;
 import javax.servlet.ServletException;
 import java.io.Serializable;
 import java.util.Collection;
@@ -59,18 +58,19 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
   
   public static final String NAME = "keycloak";
   
-  @Inject
-  Environment environment;
+  final Environment environment;
+  final WebSecurityConfigurerAdapter webSecurityConfigurerAdapter;
+  final ApplicationContext ctx;
+  final AuthenticationManager authenticationManager;
   
-  @Inject
-  WebSecurityConfigurerAdapter webSecurityConfigurerAdapter;
   
-  @Inject
-  ApplicationContext ctx;
-  
-  @Inject
   @Lazy
-  AuthenticationManager authenticationManager;
+  public KeycloakAuthenticationBackend(Environment environment, WebSecurityConfigurerAdapter webSecurityConfigurerAdapter, ApplicationContext ctx, AuthenticationManager authenticationManager) {
+    this.environment = environment;
+    this.webSecurityConfigurerAdapter = webSecurityConfigurerAdapter;
+    this.ctx = ctx;
+    this.authenticationManager = authenticationManager;
+  }
   
   @Override
   public String getName() {
@@ -115,7 +115,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourself
     RequestMatcher requestMatcher =
       new OrRequestMatcher(
-        new AntPathRequestMatcher(KeycloakAuthenticationProcessingFilter.DEFAULT_LOGIN_URL),
+        new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
         new RequestHeaderRequestMatcher(KeycloakAuthenticationProcessingFilter.AUTHORIZATION_HEADER)
       );
     

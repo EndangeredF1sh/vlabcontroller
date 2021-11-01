@@ -16,11 +16,11 @@ import eu.openanalytics.containerproxy.util.ProxyMappingManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import java.io.OutputStream;
 import java.net.URI;
 import java.time.Duration;
@@ -54,26 +54,24 @@ public class ProxyService {
   private final List<Proxy> activeProxies = Collections.synchronizedList(new ArrayList<>());
   private final ExecutorService containerKiller = Executors.newSingleThreadExecutor();
   
-  @Inject
-  private IProxySpecProvider baseSpecProvider;
+  private final IProxySpecProvider baseSpecProvider;
+  private final IProxySpecMergeStrategy specMergeStrategy;
+  private final IContainerBackend backend;
+  private final ProxyMappingManager mappingManager;
+  private final UserService userService;
+  private final LogService logService;
+  private final ApplicationEventPublisher applicationEventPublisher;
   
-  @Inject
-  private IProxySpecMergeStrategy specMergeStrategy;
-  
-  @Inject
-  private IContainerBackend backend;
-  
-  @Inject
-  private ProxyMappingManager mappingManager;
-  
-  @Inject
-  private UserService userService;
-  
-  @Inject
-  private LogService logService;
-  
-  @Inject
-  private ApplicationEventPublisher applicationEventPublisher;
+  @Lazy
+  public ProxyService(IProxySpecProvider baseSpecProvider, IProxySpecMergeStrategy specMergeStrategy, IContainerBackend backend, ProxyMappingManager mappingManager, UserService userService, LogService logService, ApplicationEventPublisher applicationEventPublisher) {
+    this.baseSpecProvider = baseSpecProvider;
+    this.specMergeStrategy = specMergeStrategy;
+    this.backend = backend;
+    this.mappingManager = mappingManager;
+    this.userService = userService;
+    this.logService = logService;
+    this.applicationEventPublisher = applicationEventPublisher;
+  }
   
   @PreDestroy
   public void shutdown() {

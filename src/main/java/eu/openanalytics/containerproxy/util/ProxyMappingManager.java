@@ -48,8 +48,11 @@ public class ProxyMappingManager {
   private final Map<String, URI> defaultTargetMappings = new HashMap<>();
   private final Logger log = LogManager.getLogger(ProxyMappingManager.class);
   private PathHandler pathHandler;
-  @Inject
-  private HeartbeatService heartbeatService;
+  private final HeartbeatService heartbeatService;
+  
+  public ProxyMappingManager(HeartbeatService heartbeatService) {
+    this.heartbeatService = heartbeatService;
+  }
   
   public synchronized HttpHandler createHttpHandler(HttpHandler defaultHandler) {
     if (pathHandler == null) {

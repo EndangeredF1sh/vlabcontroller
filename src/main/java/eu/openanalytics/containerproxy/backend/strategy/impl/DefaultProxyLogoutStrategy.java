@@ -14,9 +14,11 @@ import javax.inject.Inject;
 @Component
 @ConditionalOnMissingBean(RedisSessionProxyLogoutStrategy.class)
 public class DefaultProxyLogoutStrategy implements IProxyLogoutStrategy {
+  private final ProxyService proxyService;
   
-  @Inject
-  private ProxyService proxyService;
+  public DefaultProxyLogoutStrategy(ProxyService proxyService) {
+    this.proxyService = proxyService;
+  }
   
   @Override
   public void onLogout(String userId, boolean expired) {

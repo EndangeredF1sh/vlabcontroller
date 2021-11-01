@@ -22,14 +22,15 @@ class StatCollectorFactory {
   
   private final Logger log = LogManager.getLogger(StatCollectorFactory.class);
   
-  @Inject
-  private Environment environment;
+  private final Environment environment;
+  private final ApplicationContext applicationContext;
+  private final StatCollectorProperties statCollectorProperties;
   
-  @Inject
-  private ApplicationContext applicationContext;
-  
-  @Inject
-  private StatCollectorProperties statCollectorProperties;
+  public StatCollectorFactory(Environment environment, ApplicationContext applicationContext, StatCollectorProperties statCollectorProperties) {
+    this.environment = environment;
+    this.applicationContext = applicationContext;
+    this.statCollectorProperties = statCollectorProperties;
+  }
   
   @Bean
   public IStatCollector statsCollector() {

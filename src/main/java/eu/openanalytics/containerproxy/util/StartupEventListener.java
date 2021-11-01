@@ -13,8 +13,11 @@ import javax.inject.Inject;
 public class StartupEventListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(StartupEventListener.class);
   
-  @Inject
-  private BuildProperties buildProperties;
+  private final BuildProperties buildProperties;
+  
+  public StartupEventListener(BuildProperties buildProperties) {
+    this.buildProperties = buildProperties;
+  }
   
   @EventListener
   public void onStartup(ApplicationReadyEvent event) {

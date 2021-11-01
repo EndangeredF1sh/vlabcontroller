@@ -15,17 +15,16 @@ import javax.inject.Inject;
 @Service(value = "authenticationBackend")
 @Primary
 public class AuthenticationBackendFactory extends AbstractFactoryBean<IAuthenticationBackend> {
-  
-  @Inject
-  private Environment environment;
-  
-  @Inject
-  private ApplicationContext applicationContext;
-  
+  private final Environment environment;
+  private final ApplicationContext applicationContext;
   // These backends register some beans of their own, so must be instantiated here.
+  private final KeycloakAuthenticationBackend keycloakBackend;
   
-  @Inject
-  private KeycloakAuthenticationBackend keycloakBackend;
+  public AuthenticationBackendFactory(Environment environment, ApplicationContext applicationContext, KeycloakAuthenticationBackend keycloakBackend) {
+    this.environment = environment;
+    this.applicationContext = applicationContext;
+    this.keycloakBackend = keycloakBackend;
+  }
   
   @Override
   public Class<?> getObjectType() {
@@ -52,8 +51,9 @@ public class AuthenticationBackendFactory extends AbstractFactoryBean<IAuthentic
       case WebServiceAuthenticationBackend.NAME:
         backend = new WebServiceAuthenticationBackend();
         break;
+      default:
+        throw new RuntimeException("Unknown authentication type:" + type);
     }
-    if (backend == null) throw new RuntimeException("Unknown authentication type:" + type);
     
     applicationContext.getAutowireCapableBeanFactory().autowireBean(backend);
     return backend;

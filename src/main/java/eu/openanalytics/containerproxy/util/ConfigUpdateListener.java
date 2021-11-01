@@ -15,11 +15,13 @@ import java.security.NoSuchAlgorithmException;
 public class ConfigUpdateListener {
   protected final Logger log = LogManager.getLogger(getClass());
   
-  @Autowired
-  private ConfigFileHelper configFileHelper;
+  private final ConfigFileHelper configFileHelper;
+  private final ContextRefresher contextRefresher;
   
-  @Autowired
-  private ContextRefresher contextRefresher;
+  public ConfigUpdateListener(ConfigFileHelper configFileHelper, ContextRefresher contextRefresher) {
+    this.configFileHelper = configFileHelper;
+    this.contextRefresher = contextRefresher;
+  }
   
   @EventListener
   public void onUpdate(ConfigUpdateEvent event) throws NoSuchAlgorithmException {

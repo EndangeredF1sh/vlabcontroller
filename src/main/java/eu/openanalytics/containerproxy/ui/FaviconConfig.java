@@ -28,8 +28,11 @@ public class FaviconConfig {
   
   private static final String CONTENT_TYPE_ICO = "image/x-icon";
   
-  @Inject
-  private Environment environment;
+  private final Environment environment;
+  
+  public FaviconConfig(Environment environment) {
+    this.environment = environment;
+  }
   
   @Bean
   @ConditionalOnProperty(name = "proxy.favicon-path")
