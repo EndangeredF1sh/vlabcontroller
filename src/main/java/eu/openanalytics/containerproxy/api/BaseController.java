@@ -1,5 +1,6 @@
 package eu.openanalytics.containerproxy.api;
 
+import lombok.experimental.StandardException;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.ModelMap;
@@ -19,14 +20,9 @@ public class BaseController {
     map.put("title", environment.getProperty("proxy.title", "ShinyProxy"));
   }
   
+  @StandardException
   public static class NotFoundException extends RuntimeException {
-    
     private static final long serialVersionUID = 2042632906716154791L;
-    
-    public NotFoundException(String message) {
-      super(message);
-    }
-    
   }
   
   @ControllerAdvice
