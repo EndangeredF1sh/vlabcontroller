@@ -271,6 +271,11 @@
             <artifactId>throwing-function</artifactId>
             <version>1.5.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -344,6 +349,7 @@
                         <user>shinyproxy:shinyproxy</user>
                         <args>
                             <arg>--spring.jmx.enabled=false</arg>
+                            <arg>--spring.config.location=/etc/shinyproxy/config/application.yml</arg>
                         </args>
                     </container>
                     <extraDirectories>
