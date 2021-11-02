@@ -28,7 +28,6 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.web.filter.FormContentFilter;
 
 import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Files;

@@ -33,11 +33,11 @@ public abstract class AbstractDockerBackend extends AbstractContainerBackend {
   public void initialize() throws ContainerProxyException {
     super.initialize();
     
-    int startPort = Integer.valueOf(getProperty(PROPERTY_PORT_RANGE_START, "20000"));
-    int maxPort = Integer.valueOf(getProperty(PROPERTY_PORT_RANGE_MAX, "-1"));
+    int startPort = Integer.parseInt(getProperty(PROPERTY_PORT_RANGE_START, "20000"));
+    int maxPort = Integer.parseInt(getProperty(PROPERTY_PORT_RANGE_MAX, "-1"));
     portAllocator = new PortAllocator(startPort, maxPort);
     
-    DefaultDockerClient.Builder builder = null;
+    DefaultDockerClient.Builder builder;
     try {
       builder = DefaultDockerClient.fromEnv();
     } catch (DockerCertificateException e) {

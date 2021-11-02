@@ -117,7 +117,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     String namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
     String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
     String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
-    boolean uidNamespace = Boolean.valueOf(getProperty(PROPERTY_UID_NAMESPACE, "false"));
+    boolean uidNamespace = Boolean.parseBoolean(getProperty(PROPERTY_UID_NAMESPACE, "false"));
     log.debug("UserID Namespace Mode:" + uidNamespace);
     if (uidNamespace) {
       kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : namespacePrefix + "-" + proxy.getUserId();
@@ -170,10 +170,10 @@ public class KubernetesBackend extends AbstractContainerBackend {
       .build();
     
     ResourceRequirementsBuilder resourceRequirementsBuilder = new ResourceRequirementsBuilder();
-    resourceRequirementsBuilder.addToRequests("cpu", Optional.ofNullable(spec.getCpuRequest()).map(s -> new Quantity(s)).orElse(null));
-    resourceRequirementsBuilder.addToLimits("cpu", Optional.ofNullable(spec.getCpuLimit()).map(s -> new Quantity(s)).orElse(null));
-    resourceRequirementsBuilder.addToRequests("memory", Optional.ofNullable(spec.getMemoryRequest()).map(s -> new Quantity(s)).orElse(null));
-    resourceRequirementsBuilder.addToLimits("memory", Optional.ofNullable(spec.getMemoryLimit()).map(s -> new Quantity(s)).orElse(null));
+    resourceRequirementsBuilder.addToRequests("cpu", Optional.ofNullable(spec.getCpuRequest()).map(Quantity::new).orElse(null));
+    resourceRequirementsBuilder.addToLimits("cpu", Optional.ofNullable(spec.getCpuLimit()).map(Quantity::new).orElse(null));
+    resourceRequirementsBuilder.addToRequests("memory", Optional.ofNullable(spec.getMemoryRequest()).map(Quantity::new).orElse(null));
+    resourceRequirementsBuilder.addToLimits("memory", Optional.ofNullable(spec.getMemoryLimit()).map(Quantity::new).orElse(null));
     
     List<ContainerPort> containerPorts = spec.getPortMapping().values().stream()
       .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
@@ -248,13 +248,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
     int maxTries = totalWaitMs / 1000;
     Retrying.retry(i -> {
         if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
-          if (i > 1 && log != null)
+          if (i > 1)
             log.debug(String.format("Container not ready yet, trying again (%d/%d)", i, maxTries));
           return false;
         }
         return true;
-      }
-      , maxTries, 1000);
+      }, maxTries, 1000);
     if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
       Pod pod = kubeClient.resource(startedPod).fromServer().get();
       container.getParameters().put(PARAM_POD, pod);
@@ -264,9 +263,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     Pod pod = kubeClient.resource(startedPod).fromServer().get();
     
     Service service = null;
-    if (isUseInternalNetwork()) {
-      // If SP runs inside the cluster, it can access pods directly and doesn't need any port publishing service.
-    } else {
+    if (!isUseInternalNetwork()) {
       List<ServicePort> servicePorts = spec.getPortMapping().values().stream()
         .map(p -> new ServicePortBuilder().withPort(p).build())
         .collect(Collectors.toList());
@@ -294,24 +291,21 @@ public class KubernetesBackend extends AbstractContainerBackend {
       
       service = kubeClient.resource(startupService).fromServer().get();
     }
-    
+    // If SP runs inside the cluster, it can access pods directly and doesn't need any port publishing service.
+  
     container.getParameters().put(PARAM_POD, pod);
     container.getParameters().put(PARAM_SERVICE, service);
     
     // Calculate proxy routes for all configured ports.
-    for (String mappingKey : spec.getPortMapping().keySet()) {
-      int containerPort = spec.getPortMapping().get(mappingKey);
-      
-      int servicePort = -1;
-      if (service != null) servicePort = service.getSpec().getPorts().stream()
-        .filter(p -> p.getPort() == containerPort).map(p -> p.getNodePort())
+    for (Map.Entry<String, Integer> entry : spec.getPortMapping().entrySet()) {
+      int servicePort = service == null ? -1 : service.getSpec().getPorts().stream()
+        .filter(p -> p.getPort().equals(entry.getValue())).map(ServicePort::getNodePort)
         .findAny().orElse(-1);
-      
-      String mapping = mappingStrategy.createMapping(mappingKey, container, proxy);
-      URI target = calculateTarget(container, containerPort, servicePort);
+  
+      String mapping = mappingStrategy.createMapping(entry.getKey(), container, proxy);
+      URI target = calculateTarget(container, entry.getValue(), servicePort);
       proxy.getTargets().put(mapping, target);
     }
-    
     
     return container;
   }

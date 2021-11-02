@@ -26,7 +26,6 @@ import eu.openanalytics.containerproxy.service.LogService;
 import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Required;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.javamail.JavaMailSender;

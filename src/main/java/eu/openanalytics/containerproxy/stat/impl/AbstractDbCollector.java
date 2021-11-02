@@ -7,7 +7,6 @@ import org.springframework.context.event.EventListener;
 import java.io.IOException;
 
 public abstract class AbstractDbCollector implements IStatCollector {
-  
   @EventListener
   public void onUserLogoutEvent(UserLogoutEvent event) throws IOException {
     writeToDb(event.getTimestamp(), event.getUserId(), "Logout", null, String.valueOf(event.getWasExpired()));

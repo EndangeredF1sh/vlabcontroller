@@ -85,11 +85,11 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
   
   @Override
   public void initialize() throws ContainerProxyException {
-    unsafeLabel = Boolean.valueOf(environment.getProperty("proxy.unsafe-label", "false"));
+    unsafeLabel = Boolean.parseBoolean(environment.getProperty("proxy.unsafe-label", "false"));
     log.info("Non-safe Labels Mode: " + unsafeLabel);
     // If this application runs as a container itself, things like port publishing can be omitted.
-    useInternalNetwork = Boolean.valueOf(getProperty(PROPERTY_INTERNAL_NETWORKING, "false"));
-    privileged = Boolean.valueOf(getProperty(PROPERTY_PRIVILEGED, "false"));
+    useInternalNetwork = Boolean.parseBoolean(getProperty(PROPERTY_INTERNAL_NETWORKING, "false"));
+    privileged = Boolean.parseBoolean(getProperty(PROPERTY_PRIVILEGED, "false"));
     realmId = environment.getProperty("proxy.realm-id");
     try {
       instanceId = calculateInstanceId();
@@ -204,7 +204,7 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     env.add(String.format("%s=%s", ENV_VAR_USER_NAME, proxy.getUserId()));
     
     String[] groups = userService.getGroups(userService.getCurrentAuth());
-    env.add(String.format("%s=%s", ENV_VAR_USER_GROUPS, Arrays.stream(groups).collect(Collectors.joining(","))));
+    env.add(String.format("%s=%s", ENV_VAR_USER_GROUPS, String.join(",", groups)));
     
     String realmId = environment.getProperty("proxy.realm-id");
     if (realmId != null) {
@@ -215,8 +215,8 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     if (envFile != null && Files.isRegularFile(Paths.get(envFile))) {
       Properties envProps = new Properties();
       envProps.load(new FileInputStream(envFile));
-      for (Object key : envProps.keySet()) {
-        env.add(String.format("%s=%s", key, envProps.get(key)));
+      for (Map.Entry<Object, Object> key : envProps.entrySet()) {
+        env.add(String.format("%s=%s", key.getKey(), key.getValue()));
       }
     }
     

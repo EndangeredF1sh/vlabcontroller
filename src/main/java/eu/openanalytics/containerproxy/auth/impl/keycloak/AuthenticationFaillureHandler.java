@@ -10,8 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class AuthenticationFaillureHandler extends KeycloakAuthenticationFailureHandler {
-  
-  final public static String SP_KEYCLOAK_ERROR_REASON = "SP_KEYCLOAK_ERROR_REASON";
+  public static final String SP_KEYCLOAK_ERROR_REASON = "SP_KEYCLOAK_ERROR_REASON";
   
   @Override
   public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
