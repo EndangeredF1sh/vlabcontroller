@@ -1,5 +1,6 @@
 package eu.openanalytics.containerproxy.util;
 
+import com.google.common.collect.Streams;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.service.HeartbeatService;
 import io.undertow.server.HttpHandler;
@@ -17,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
-import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -28,11 +28,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This component keeps track of which proxy mappings (i.e. URL endpoints) are currently registered,
@@ -162,13 +162,23 @@ public class ProxyMappingManager {
     boolean targetConnected = Retrying.retry(i -> {
       try {
 				String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
-				if (!request.getProtocol().contains("http")) return true;
+        log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Streams.stream(request.getHeaderNames().asIterator()).collect(Collectors.toList()));
+        
+        // Handle websocket case
+				if (request.getHeaders("Sec-WebSocket-Protocol").hasMoreElements()) {
+          return true;
+        }
 				URL testURL = new URL(newTarget + mapping + query);
+				log.debug("Testing url of {}", testURL);
 				HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
 				connection.setConnectTimeout(5000);
         connection.setInstanceFollowRedirects(false);
         int responseCode = connection.getResponseCode();
-				if (responseCode < 400) return true;
+        log.debug("received connection from {}, status code: {}", testURL, responseCode);
+				if (responseCode < 400) {
+				  log.debug("successfully connected to target {}", testURL);
+				  return true;
+        }
       } catch (Exception e) {
         log.debug("Trying to connect target URL ({}/{})", i, 5);
       }
