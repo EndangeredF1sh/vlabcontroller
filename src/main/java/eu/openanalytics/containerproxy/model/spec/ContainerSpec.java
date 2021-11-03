@@ -5,20 +5,20 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.util.Pair;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ContainerSpec {
   
   @Getter @Setter private String image;
   @Getter @Setter private String[] cmd;
-  @Getter @Setter private Map<String, String> env;
+  @Getter @Setter private Map<String, String> env = new HashMap<>();
   @Getter @Setter private String envFile;
   @Getter @Setter private String network;
   @Getter @Setter private String[] networkConnections;
   @Getter @Setter private String[] dns;
   @Getter @Setter private String[] volumes;
+  @Getter @Setter private List<Integer> ports = new ArrayList<>();
   @Getter @Setter private Map<String, Integer> portMapping = new HashMap<>();
   @Getter @Setter private boolean privileged;
   @Getter @Setter private String memoryRequest;
@@ -69,6 +69,14 @@ public class ContainerSpec {
       if (target.getPortMapping() == null) target.setPortMapping(new HashMap<>());
       target.getPortMapping().putAll(portMapping);
     }
+    if (ports != null) {
+      if (target.getPorts() == null) target.setPorts(new ArrayList<>());
+      target.getPorts().addAll(this.getPorts());
+      target.getPortMapping().putAll(
+        ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x))
+      );
+    }
+    
     target.setMemoryRequest(memoryRequest);
     target.setMemoryLimit(memoryLimit);
     target.setCpuRequest(cpuRequest);
