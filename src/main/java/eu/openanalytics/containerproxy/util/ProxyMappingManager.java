@@ -161,12 +161,14 @@ public class ProxyMappingManager {
     
     boolean targetConnected = Retrying.retry(i -> {
       try {
-        URL testURL = newTarget.toURL();
-        HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
-        connection.setConnectTimeout(5000);
+				String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
+				if (!request.getProtocol().contains("http")) return true;
+				URL testURL = new URL(newTarget + mapping + query);
+				HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
+				connection.setConnectTimeout(5000);
         connection.setInstanceFollowRedirects(false);
         int responseCode = connection.getResponseCode();
-        if (Arrays.asList(200, 301, 302, 303, 307, 308).contains(responseCode)) return true;
+				if (responseCode < 400) return true;
       } catch (Exception e) {
         log.debug("Trying to connect target URL ({}/{})", i, 5);
       }
