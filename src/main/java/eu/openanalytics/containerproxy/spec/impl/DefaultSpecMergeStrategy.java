@@ -7,7 +7,6 @@ import eu.openanalytics.containerproxy.spec.ProxySpecException;
 import eu.openanalytics.containerproxy.spec.setting.SettingTypeRegistry;
 import org.springframework.stereotype.Component;
 
-import javax.inject.Inject;
 import java.util.Set;
 import java.util.UUID;
 
@@ -36,7 +35,13 @@ public class DefaultSpecMergeStrategy implements IProxySpecMergeStrategy {
       }
     }
     
-    if (finalSpec.getId() == null) finalSpec.setId(UUID.randomUUID().toString());
+    if (finalSpec.getId() == null) {
+      var id = UUID.randomUUID().toString();
+      finalSpec.setId(id);
+      for (var containerSpec : finalSpec.getContainerSpecs()) {
+        containerSpec.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
+      }
+    }
     return finalSpec;
   }
   
