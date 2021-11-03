@@ -17,8 +17,8 @@
     <div class="app_list">
 		<ul>
 			<li th:each="app: ${apps}">
-				<h5 th:if="${app.displayName == null}" th:utext="|<img height=30px src=${appLogos.get(app) == null ? '' : appLogos.get(app)}></img> ${app.id} <small style='font-size: 60%; margin-left: 10px'>${app.description != null ? app.description : ''}</small>|" style="font-size: 1.5rem"></h5>
-				<h5 th:if="${app.displayName != null}" th:utext="|<img height=30px src=${appLogos.get(app) == null ? '' : appLogos.get(app)}></img> ${app.displayName} <small style='font-size: 60%; margin-left: 10px'>${app.description != null ? app.description : ''}</small>|" style="font-size: 1.5rem"></h5>
+				<h5 th:if="${app.displayName == null}" th:utext="|<img height=30px src=${appLogos.get(app) == null ? '' : appLogos.get(app)}></img> ${app.id} <small style='font-size: 60%; margin-left: 10px; line-height: 1.5; font-weight: 380;'>${app.description != null ? app.description : ''}</small>|" style="font-size: 1.7rem"></h5>
+				<h5 th:if="${app.displayName != null}" th:utext="|<img height=30px src=${appLogos.get(app) == null ? '' : appLogos.get(app)}></img> ${app.displayName} <small style='font-size: 60%; margin-left: 10px; line-height: 1.5; font-weight: 380;'>${app.description != null ? app.description : ''}</small>|" style="font-size: 1.7rem"></h5>
 				<table class="table table-sm">
 					<tbody>
 					<tr th:each="subapp: ${app.subApps}">
@@ -26,7 +26,7 @@
 							<a th:if="${subapp.subDomain == '' || !enableSubDomainMode}" th:href="@{'/app/'+${app.id}+'/'+${subapp.path}(md=${app.defaultTutorialLink})}" th:text="${subapp.displayName}" class="subapp_link"></a>
 							<a th:if="${subapp.subDomain != '' && enableSubDomainMode}" th:href="@{'/redirect/'+${subapp.subDomain}(md=${app.defaultTutorialLink})}" th:text="${subapp.displayName}" class="subapp_link"></a>
 						</td>
-						<td style="width: 80%">
+						<td style="width: 85%">
 							<a th:if="${subapp.description != null}" th:utext="${subapp.description}"></a>
 						</td>
 					</tr>

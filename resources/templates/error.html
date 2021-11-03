@@ -15,7 +15,11 @@
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.0/dist/jquery.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" />
-    <link rel="stylesheet" th:href="@{/assets/css/error.css}"/>
+    <style>
+        .py-5 {
+            padding-top: 10rem!important;
+        }
+    </style>
 </head>
 
 <body class="bg-dark text-white py-5">
@@ -28,8 +32,8 @@
         <div class="col-md-10">
             <h3 id="error_header">OPPSSS!!!! Sorry...</h3>
             <p id="error_text">The page you are looking for does not exist.<br>You can click the button below to go back to the homepage.</p>
-            <a id="error_button" class="btn btn-primary" th:href="@{/}">Back to homepage</a>
-            <a id="logout_button" class="btn btn-danger" th:href="@{/logout}" hidden="hidden">Logout</a>
+            <a id="error_button" class="btn btn-primary">Back to homepage</a>
+            <a id="logout_button" class="btn btn-danger" hidden="hidden">Logout</a>
         </div>
         <div id="stack_trace" class="col-md-20" hidden="hidden">
             <h4>Traceback:</h4>
@@ -46,6 +50,7 @@
 
     // GET parameters error message handler
     let url = new URL(window.location.href)
+    let homepage_url = url.hostname.split("--")[2];
     let query = null
     try{
         query = JSON.parse(atob(url.searchParams.get("query")))
@@ -59,9 +64,23 @@
     }
     if (error_code === 403){
         $("#error_header").text("Forbidden");
-        $("#error_text").text("You don't have permission to access on this server.");
+        $("#error_text").html("You don't have permission to access this endpoint: <br>" + location.href);
         $("#error_button").hide();
         $("#logout_button").removeAttr("hidden");
     }
+    $("#error_button").click(function () {
+        if (homepage_url) {
+            window.location.href = url.protocol + "//" + homepage_url + ":" + url.port;
+        }else{
+            window.location.href = "/";
+        }
+    });
+    $("#logout_button").click(function () {
+        if (homepage_url) {
+            window.location.href = url.protocol + "//" + homepage_url + ":" + url.port + "/logout";
+        }else{
+            window.location.href = "/logout";
+        }
+    })
 </script>
 </html>

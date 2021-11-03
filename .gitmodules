@@ -1,0 +1,3 @@
+[submodule "resources/templates"]
+	path = resources/templates
+	url = https://gitlab.polyu.edu.hk/vlab/shinyproxy-templates
