@@ -1,5 +1,6 @@
 package eu.openanalytics.containerproxy.model.spec;
 
+import eu.openanalytics.containerproxy.spec.impl.DefaultSpecProvider;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -45,6 +46,7 @@ public class ProxySpec {
       for (ContainerSpec spec : containerSpecs) {
         ContainerSpec copy = new ContainerSpec();
         spec.copy(copy);
+        copy.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
         target.getContainerSpecs().add(copy);
       }
     }
