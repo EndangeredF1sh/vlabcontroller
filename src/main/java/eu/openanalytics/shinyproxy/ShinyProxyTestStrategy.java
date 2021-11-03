@@ -92,9 +92,9 @@ public class ShinyProxyTestStrategy implements IProxyTestStrategy {
         connection.setConnectTimeout(timeoutMs);
         connection.setInstanceFollowRedirects(false);
         int responseCode = connection.getResponseCode();
-        if (Arrays.asList(200, 301, 302, 303, 307, 308).contains(responseCode)) return true;
+        if (responseCode < 400) return true;
       } catch (Exception e) {
-        if (i > 1 && log != null)
+        if (i > 1)
           log.warn(String.format("Container unresponsive, trying again (%d/%d): %s", i, maxTries, targetURI));
       }
       return false;
