@@ -1,7 +1,5 @@
 package eu.openanalytics.containerproxy.backend;
 
-import eu.openanalytics.containerproxy.backend.docker.DockerEngineBackend;
-import eu.openanalytics.containerproxy.backend.docker.DockerSwarmBackend;
 import eu.openanalytics.containerproxy.backend.kubernetes.KubernetesBackend;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
@@ -9,8 +7,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-
-import javax.inject.Inject;
 
 @Service
 public class ContainerBackendFactory extends AbstractFactoryBean<IContainerBackend> implements ApplicationContextAware {
@@ -43,8 +39,6 @@ public class ContainerBackendFactory extends AbstractFactoryBean<IContainerBacke
   }
   
   private enum ContainerBackend {
-    DockerEngine("docker", DockerEngineBackend.class),
-    DockerSwarm("docker-swarm", DockerSwarmBackend.class),
     Kubernetes("kubernetes", KubernetesBackend.class);
     
     private final String name;
@@ -59,7 +53,7 @@ public class ContainerBackendFactory extends AbstractFactoryBean<IContainerBacke
       for (ContainerBackend cb : values()) {
         if (cb.name.equalsIgnoreCase(name)) return cb.type.newInstance();
       }
-      return DockerEngine.type.newInstance();
+      return null;
     }
   }
 }

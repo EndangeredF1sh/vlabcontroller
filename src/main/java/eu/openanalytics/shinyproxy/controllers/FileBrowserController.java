@@ -46,10 +46,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static eu.openanalytics.shinyproxy.ShinyProxySpecProvider.getProxySpec;
+import static eu.openanalytics.containerproxy.model.spec.ContainerSpec.getProxySpec;
 
 @Controller
 public class FileBrowserController extends BaseController {

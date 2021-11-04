@@ -35,7 +35,7 @@ public class FileUpdateService extends Thread {
   @PostConstruct
   public void start() {
     if (configAutoUpdate) {
-      log.info(String.format("Starting configuration auto detection, interval: %dms", interval));
+      log.info("Starting configuration auto detection, interval: {}ms", interval);
       super.start();
     }
   }
