@@ -9,15 +9,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ContainerSpec {
-  
   @Getter @Setter private String image;
-  @Getter @Setter private String[] cmd;
+  @Getter @Setter private List<String> cmd = new ArrayList<>();
   @Getter @Setter private Map<String, String> env = new HashMap<>();
   @Getter @Setter private String envFile;
   @Getter @Setter private String network;
-  @Getter @Setter private String[] networkConnections;
-  @Getter @Setter private String[] dns;
-  @Getter @Setter private String[] volumes;
+  @Getter @Setter private List<String> networkConnections = new ArrayList<>();
+  @Getter @Setter private List<String> dns = new ArrayList<>();
+  @Getter @Setter private List<String> volumes = new ArrayList<>();
   @Getter @Setter private List<Integer> ports = new ArrayList<>();
   @Getter @Setter private Map<String, Integer> portMapping = new HashMap<>();
   @Getter @Setter private boolean privileged;
@@ -39,6 +38,22 @@ public class ContainerSpec {
    */
   @Setter private Map<String, Pair<Boolean, String>> runtimeLabels = new HashMap<>();
   
+  public static ProxySpec getProxySpec(ProxySpec to, ContainerSpec cSpec, Map<String, String> labels, int port) {
+    cSpec.setLabels(labels);
+    
+    Map<String, Integer> portMapping = new HashMap<>();
+    if (port > 0) {
+      portMapping.put("default", port);
+    } else {
+      portMapping.put("default", 3838);
+    }
+    cSpec.setPortMapping(portMapping);
+    
+    to.setContainerSpecs(Collections.singletonList(cSpec));
+    
+    return to;
+  }
+  
   @JsonIgnore
   public Map<String, Pair<Boolean, String>> getRuntimeLabels() {
     return runtimeLabels;
@@ -54,7 +69,7 @@ public class ContainerSpec {
   
   public void copy(ContainerSpec target) {
     target.setImage(image);
-    if (cmd != null) target.setCmd(Arrays.copyOf(cmd, cmd.length));
+    if (cmd != null) target.setCmd(List.copyOf(cmd));
     if (env != null) {
       if (target.getEnv() == null) target.setEnv(new HashMap<>());
       target.getEnv().putAll(env);
@@ -62,9 +77,9 @@ public class ContainerSpec {
     target.setEnvFile(envFile);
     target.setNetwork(network);
     if (networkConnections != null)
-      target.setNetworkConnections(Arrays.copyOf(networkConnections, networkConnections.length));
-    if (dns != null) target.setDns(Arrays.copyOf(dns, dns.length));
-    if (volumes != null) target.setVolumes(Arrays.copyOf(volumes, volumes.length));
+      target.setNetworkConnections(List.copyOf(networkConnections));
+    if (dns != null) target.setDns(List.copyOf(dns));
+    if (volumes != null) target.setVolumes(List.copyOf(volumes));
     if (portMapping != null) {
       if (target.getPortMapping() == null) target.setPortMapping(new HashMap<>());
       target.getPortMapping().putAll(portMapping);
