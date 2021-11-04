@@ -1,51 +1,48 @@
-/**
- * ContainerProxy
- *
- * Copyright (C) 2016-2021 Open Analytics
- *
- * ===========================================================================
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the Apache License as published by
- * The Apache Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * Apache License for more details.
- *
- * You should have received a copy of the Apache License
- * along with this program.  If not, see <http://www.apache.org/licenses/>
- */
 package eu.openanalytics.containerproxy.spec.impl;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
 import eu.openanalytics.containerproxy.spec.IProxySpecProvider;
+import eu.openanalytics.containerproxy.util.SessionHelper;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
+@Primary
 @ConfigurationProperties(prefix = "proxy")
 public class DefaultSpecProvider implements IProxySpecProvider {
-	
-	private List<ProxySpec> specs = new ArrayList<>();
-	
-	public List<ProxySpec> getSpecs() {
-		return new ArrayList<>(specs);
-	}
-	
-	public ProxySpec getSpec(String id) {
-		if (id == null || id.isEmpty()) return null;
-		return specs.stream().filter(s -> id.equals(s.getId())).findAny().orElse(null);
-	}
-	
-	public void setSpecs(List<ProxySpec> specs) {
-		this.specs = specs;
-	}
-	
+  @Getter @Setter private List<ProxySpec> specs = new ArrayList<>();
+  
+  public ProxySpec getSpec(String id) {
+    if (id == null || id.isEmpty()) return null;
+    return specs.stream().filter(s -> id.equals(s.getId())).findAny().orElse(null);
+  }
+  
+  @PostConstruct
+  public void afterPropertiesSet() {
+    this.specs.stream().collect(Collectors.groupingBy(ProxySpec::getId)).forEach((id, duplicateSpecs) -> {
+      if (duplicateSpecs.size() > 1) throw new IllegalArgumentException(String.format("Configuration error: spec with id '%s' is defined multiple times", id));
+    });
+  }
+  
+  private static Environment environment;
+  
+  @Autowired
+  public void setEnvironment(Environment env){
+    DefaultSpecProvider.environment = env;
+  }
+  
+  public static String getPublicPath(String appName) {
+    String contextPath = SessionHelper.getContextPath(environment, true);
+    return contextPath + "app_direct/" + appName + "/";
+  }
 }

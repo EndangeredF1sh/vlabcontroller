@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+<head lang="en">
+	<title th:text="${appTitle}"></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<link rel="stylesheet" media="screen" th:href="@{/assets/css/default.css}"/>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.0/dist/jquery.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.0/split.min.js"></script>
+</head>
+
+<body>
+	<div th:replace="navbar :: navbar"></div>
+
+	<div id="loading_anime">
+		<div class="loader">
+			<svg viewBox="0 0 32 32" width="100" height="100">
+				<circle id="spinner" cx="16" cy="16" r="14" fill="none"></circle>
+			</svg>
+		</div>
+		<div class="loading-text">
+			Loading <span th:text="${appTitle}"></span> ...
+		</div>
+	</div>
+
+	<div class="split" style="padding:0">
+		<div class="split-0">
+			<iframe id="mdframe" src="" width="0%" height="0%" allow="clipboard-read; clipboard-write"></iframe>
+		</div>
+		<div class="split-1">
+			<iframe id="shinyframe" th:src="${container}" width="0%" height="0%" allow="clipboard-read; clipboard-write" allowfullscreen></iframe>
+		</div>
+	</div>
+
+	<script type="text/javascript" th:inline="javascript">
+		var sub_domain_mode = /*[[${subDomainMode}]]*/ null;
+		var iframeURL = /*[[${iframeURL}]]*/ null;
+		var markdownURL = /*[[${markdownUrl}]]*/ null;
+		if (markdownURL == null || markdownURL === ""){
+			$(".split-0").remove();
+			$(".split-1").width("100%");
+		}else{
+			$("#mdframe").attr("src", decodeURIComponent(markdownURL));
+			var split = Split(['.split-0', '.split-1'], {
+				sizes: [33, 67],
+				minSize: [0, 768],
+				snapOffset: 30,
+				gutterSize: 20,
+			});
+		}
+		function setShinyframeSize() {
+			$('#shinyframe').css('height', ($(window).height() - $("#navbar").height() - 6)+'px');
+			$('#shinyframe').css('width', '100%');
+		}
+		function setMarkdownFrameSize(){
+			$('#mdframe').css('height', ($(window).height() - $("#navbar").height() - 6)+'px');
+			$('#mdframe').css('width', '100%');
+		}
+		function setGutterSize(){
+			$('.gutter').css('height', ($(window).height() - $("#navbar").height() - 6)+'px');
+		}
+		$(window).resize(function (){
+			setShinyframeSize();
+			setGutterSize();
+			setMarkdownFrameSize();
+		});
+
+		$(window).on('load', function() {
+			var source = $("#shinyframe").attr("src");
+			if (source == "") {
+				$("#div_terminate").hide();
+				$("#appsDropdown").hide();
+				$("#loading_anime").show();
+				$.post(window.location.pathname + window.location.search, function(response) {
+					if (response.error_code != null){
+						let query = {"error_code": response.error_code, "error_message": response.error_message}
+						window.location.href = "/error?query=" + btoa(JSON.stringify(query))
+					}
+					if (sub_domain_mode) {
+						$("#shinyframe").attr("src", iframeURL);
+					}else{
+						$("#shinyframe").attr("src", response.containerPath);
+					}
+					// work with navbar
+					proxy_id = response.proxyId;
+
+					// user enter /app first time and navbar open
+					initialize ? initialize() : null;
+					var detection = is_alive ? setTimeout(is_alive, detection_interval) : null;
+
+					$("#loading_anime").fadeOut("slow");
+					setShinyframeSize();
+					setMarkdownFrameSize();
+					setGutterSize();
+					$("#div_terminate").show();
+					$("#appsDropdown").show();
+					$("#countdown").addClass("d-md-block");
+				}).fail(function(request) {
+					let errorMessage = document.open("text/html", "replace");
+					errorMessage.write(request.responseText);
+					errorMessage.close();
+				});
+			}else{
+				setShinyframeSize();
+				setMarkdownFrameSize();
+				setGutterSize();
+				$("#countdown").addClass("d-md-block");
+			}
+		});
+	</script>
+</body>
+</html>

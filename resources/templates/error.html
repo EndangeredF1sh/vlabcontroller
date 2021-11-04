@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html
+        lang="id" dir="ltr"
+        xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity4">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="description" content="" />
+    <meta name="author" content="" />
+
+    <!-- Title -->
+    <title>Sorry, This Page Can&#39;t Be Accessed</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.0/dist/jquery.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" />
+    <style>
+        .py-5 {
+            padding-top: 10rem!important;
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-white py-5">
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-2 text-center">
+            <i class="fa fa-exclamation-triangle fa-5x"></i>
+            <p>Status code: <span th:text="${status}" id="error_code"></span></p>
+        </div>
+        <div class="col-md-10">
+            <h3 id="error_header">OPPSSS!!!! Sorry...</h3>
+            <p id="error_text">The page you are looking for does not exist.<br>You can click the button below to go back to the homepage.</p>
+            <a id="error_button" class="btn btn-primary">Back to homepage</a>
+            <a id="logout_button" class="btn btn-danger" hidden="hidden">Logout</a>
+        </div>
+        <div id="stack_trace" class="col-md-20" hidden="hidden">
+            <h4>Traceback:</h4>
+            <p th:utext="${stackTrace}"></p>
+        </div>
+    </div>
+</div>
+</body>
+<script lang="JavaScript" th:inline="javascript">
+    // thymeleaf template error parameters handler
+    /*<![CDATA[*/
+    let error_code = /*[[${status}]]*/ null;
+    /*]]>*/
+
+    // GET parameters error message handler
+    let url = new URL(window.location.href)
+    let homepage_url = url.hostname.split("--")[2];
+    let query = null
+    try{
+        query = JSON.parse(atob(url.searchParams.get("query")))
+    }catch (e){
+        console.log(e)
+    }
+    if (query != null){
+        error_code = query.error_code
+        $("#error_code").text(query.error_code)
+        $("#error_text").text(query.error_message)
+    }
+    if (error_code === 403){
+        $("#error_header").text("Forbidden");
+        $("#error_text").html("You don't have permission to access this endpoint: <br>" + location.href);
+        $("#error_button").hide();
+        $("#logout_button").removeAttr("hidden");
+    }
+    $("#error_button").click(function () {
+        if (homepage_url) {
+            window.location.href = url.protocol + "//" + homepage_url + ":" + url.port;
+        }else{
+            window.location.href = "/";
+        }
+    });
+    $("#logout_button").click(function () {
+        if (homepage_url) {
+            window.location.href = url.protocol + "//" + homepage_url + ":" + url.port + "/logout";
+        }else{
+            window.location.href = "/logout";
+        }
+    })
+</script>
+</html>
