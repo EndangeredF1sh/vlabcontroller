@@ -5,7 +5,9 @@ import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
 import org.springframework.data.util.Pair;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Adds expression support to ContainerSpecs.
@@ -32,7 +34,7 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     return resolve(source.getImage());
   }
   
-  public String[] getCmd() {
+  public List<String> getCmd() {
     return resolve(source.getCmd());
   }
   
@@ -51,15 +53,15 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     return resolve(source.getNetwork());
   }
   
-  public String[] getNetworkConnections() {
+  public List<String> getNetworkConnections() {
     return resolve(source.getNetworkConnections());
   }
   
-  public String[] getDns() {
+  public List<String> getDns() {
     return resolve(source.getDns());
   }
   
-  public String[] getVolumes() {
+  public List<String> getVolumes() {
     return resolve(source.getVolumes());
   }
   
@@ -113,13 +115,9 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     return resolver.evaluateToString(expression, context);
   }
   
-  protected String[] resolve(String[] expression) {
-    if (expression == null) return null;
-    String[] unresolved = expression;
-    String[] resolved = new String[unresolved.length];
-    for (int i = 0; i < unresolved.length; i++) {
-      resolved[i] = resolver.evaluateToString(unresolved[i], context);
-    }
-    return resolved;
+  protected List<String> resolve(List<String> expression) {
+    return expression.stream()
+      .map(x -> resolver.evaluateToString(x, context))
+      .collect(Collectors.toList());
   }
 }
