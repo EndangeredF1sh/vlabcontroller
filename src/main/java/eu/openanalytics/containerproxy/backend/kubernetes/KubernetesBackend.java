@@ -220,7 +220,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     var containerBuilder = new ContainerBuilder()
                             .withImage(spec.getImage())
                             .withCommand(spec.getCmd())
-                            .withName("sp-container-" + container.getId())
+                            .withName(String.format("sp-container-%s", UUID.randomUUID()))
                             .withPorts(
                                     spec.getPortMapping().values().stream()
                                             .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
