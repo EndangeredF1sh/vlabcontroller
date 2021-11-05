@@ -106,43 +106,52 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
         proxy.setCreatedTimestamp(System.currentTimeMillis());
 
         try {
-            doStartProxy(proxy);
-        } catch (Throwable t) {
-            stopProxy(proxy);
-            throw new ContainerProxyException("Failed to start container", t);
-        }
+            try {
+                doStartProxy(proxy);
+            } catch (Throwable t) {
+                throw new ContainerProxyException("Failed to start container", t);
+            }
 
-        if (!testStrategy.testProxy(proxy)) {
-            stopProxy(proxy);
-            throw new ContainerProxyException("Container did not respond in time");
-        }
+            if (!testStrategy.testProxy(proxy)) {
+                throw new ContainerProxyException("Container did not respond in time");
+            }
 
-        proxy.setStartupTimestamp(System.currentTimeMillis());
-        proxy.setStatus(ProxyStatus.Up);
+            proxy.setStartupTimestamp(System.currentTimeMillis());
+            proxy.setStatus(ProxyStatus.Up);
+
+        } catch (ContainerProxyException e) {
+            try {
+                stopProxy(proxy);
+            } catch (Exception ex) {
+                log.error(ex);
+            }
+            throw e;
+        }
     }
 
     protected void doStartProxy(Proxy proxy) throws Exception {
-        var eSpecs = proxy.getSpec().getContainerSpecs().stream().map(spec -> {
-                    if (authBackend != null) authBackend.customizeContainer(spec);
+        var eSpecs = proxy.getSpec().getContainerSpecs().stream()
+        .map(spec -> {
+            if (authBackend != null) authBackend.customizeContainer(spec);
 
-                    // add labels need for App Recovery and maintenance
-                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
-                    spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
+            // add labels need for App Recovery and maintenance
+            spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
+            spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
 
-                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, unsafeLabel, proxy.getId());
-                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, unsafeLabel, proxy.getSpec().getId());
-                    if (realmId != null) {
-                        spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
-                    }
-                    spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
-                    spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
-                    String[] groups = userService.getGroups(userService.getCurrentAuth());
-                    spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
+            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, unsafeLabel, proxy.getId());
+            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, unsafeLabel, proxy.getSpec().getId());
+            if (realmId != null) {
+                spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
+            }
+            spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
+            spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
+            String[] groups = userService.getGroups(userService.getCurrentAuth());
+            spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
 
-                    return new ExpressionAwareContainerSpec(spec, proxy, expressionResolver);
-                })
-                .map(ContainerSpec.class::cast)
-                .collect(Collectors.toList());
+            return new ExpressionAwareContainerSpec(spec, proxy, expressionResolver);
+        })
+        .map(ContainerSpec.class::cast)
+        .collect(Collectors.toList());
 
         Container c = startContainer(eSpecs, proxy);
         c.setSpecs(eSpecs);
