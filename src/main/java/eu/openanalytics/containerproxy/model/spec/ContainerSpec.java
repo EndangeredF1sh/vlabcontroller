@@ -84,7 +84,7 @@ public class ContainerSpec {
         }
         cSpec.setPortMapping(portMapping);
 
-        to.setContainerSpecs(Collections.singletonList(cSpec));
+        to.setContainerSpecs(List.of(cSpec));
 
         return to;
     }

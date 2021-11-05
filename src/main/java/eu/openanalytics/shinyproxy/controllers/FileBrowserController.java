@@ -123,9 +123,9 @@ public class FileBrowserController extends BaseController {
             }
         }
         spec.setKubernetesAdditionalManifests(fbp.getKubernetesAdditionalManifests());
-        cSpec.setImage(fbp.getContainerImage());
-        cSpec.setCmd(fbp.getContainerCmd());
-        Map<String, String> env = fbp.getContainerEnv();
+        cSpec.setImage(fbp.getImage());
+        cSpec.setCmd(fbp.getCmd());
+        Map<String, String> env = fbp.getEnv();
         if (env == null) {
             env = new HashMap<>();
         }
@@ -134,10 +134,10 @@ public class FileBrowserController extends BaseController {
         env.put("SHINYPROXY_PUBLIC_PATH", contextPath + "app_direct/filebrowser/");
 
         cSpec.setEnv(env);
-        cSpec.setNetwork(fbp.getContainerNetwork());
-        cSpec.setVolumes(fbp.getContainerVolumes());
-        cSpec.setMemoryLimit(fbp.getContainerMemoryLimit());
-        cSpec.setCpuLimit(fbp.getContainerCpuLimit());
+        cSpec.setNetwork(fbp.getNetwork());
+        cSpec.setVolumes(fbp.getVolumes());
+        cSpec.setMemoryLimit(fbp.getMemoryLimit());
+        cSpec.setCpuLimit(fbp.getCpuLimit());
         return getProxySpec(spec, cSpec, fbp.getLabels(), fbp.getPort());
     }
 
