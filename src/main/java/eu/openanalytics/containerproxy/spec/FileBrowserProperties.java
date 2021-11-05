@@ -17,16 +17,38 @@ import java.util.Map;
 @Configuration
 @ConfigurationProperties(prefix = "proxy.filebrowser")
 public class FileBrowserProperties {
-  @Getter @Setter private String containerImage;
-  @Getter @Setter private List<String> containerCmd = List.of();
-  @Getter @Setter private Map<String, String> containerEnv = new HashMap<>();
-  @Getter @Setter private String containerNetwork;
-  @Getter @Setter private List<String> containerVolumes = new ArrayList<>();
-  @Getter @Setter private String containerMemoryLimit;
-  @Getter @Setter private String containerCpuLimit;
-  @Getter @Setter private int port;
-  
-  @Getter @Setter private String kubernetesPodPatches;
-  @Getter @Setter private List<String> kubernetesAdditionalManifests = new ArrayList<>();
-  @Getter @Setter private Map<String, String> labels;
+    @Getter
+    @Setter
+    private String containerImage;
+    @Getter
+    @Setter
+    private List<String> containerCmd = List.of();
+    @Getter
+    @Setter
+    private Map<String, String> containerEnv = new HashMap<>();
+    @Getter
+    @Setter
+    private String containerNetwork;
+    @Getter
+    @Setter
+    private List<String> containerVolumes = new ArrayList<>();
+    @Getter
+    @Setter
+    private String containerMemoryLimit;
+    @Getter
+    @Setter
+    private String containerCpuLimit;
+    @Getter
+    @Setter
+    private int port;
+
+    @Getter
+    @Setter
+    private String kubernetesPodPatches;
+    @Getter
+    @Setter
+    private List<String> kubernetesAdditionalManifests = new ArrayList<>();
+    @Getter
+    @Setter
+    private Map<String, String> labels;
 }

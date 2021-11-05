@@ -12,11 +12,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "proxy.usage-stats-url")
 public class StatCollectorProperties {
-  @Getter @Setter private String influxURL = "";
-  @Getter @Setter private String jdbcURL = "";
-  @Getter @Setter private String micrometerURL = "";
-  
-  public boolean backendExists() {
-    return !influxURL.isEmpty() || !jdbcURL.isEmpty() || !micrometerURL.isEmpty();
-  }
+    @Getter
+    @Setter
+    private String influxURL = "";
+    @Getter
+    @Setter
+    private String jdbcURL = "";
+    @Getter
+    @Setter
+    private String micrometerURL = "";
+
+    public boolean backendExists() {
+        return !influxURL.isEmpty() || !jdbcURL.isEmpty() || !micrometerURL.isEmpty();
+    }
 }

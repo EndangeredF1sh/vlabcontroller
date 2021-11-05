@@ -5,7 +5,7 @@ package eu.openanalytics.containerproxy.backend.strategy;
  * the user logs out.
  */
 public interface IProxyLogoutStrategy {
-  
-  void onLogout(String userId, boolean expired);
-  
+
+    void onLogout(String userId, boolean expired);
+
 }

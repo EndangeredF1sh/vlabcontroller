@@ -37,34 +37,34 @@ import java.util.Map;
 
 @Controller
 public class ControlPanelController extends BaseController {
-  protected ControlPanelController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend) {
-    super(proxyService, userService, environment, authenticationBackend);
-  }
-  
-  @RequestMapping("/controlpanel")
-  private String panel(ModelMap map, HttpServletRequest request) {
-    prepareMap(map, request);
-    String username = getUserName(request);
-    List<Proxy> proxies = proxyService.getProxies(p -> p.getUserId().equals(username), false);
-    
-    Map<String, String> proxyUptimes = new HashMap<>();
-    for (Proxy proxy : proxies) {
-      long uptimeSec = 0;
-      // if the proxy hasn't started up yet, the uptime should be zero
-      if (proxy.getStartupTimestamp() > 0) {
-        uptimeSec = (System.currentTimeMillis() - proxy.getStartupTimestamp()) / 1000;
-      }
-      String uptime = String.format("%d:%02d:%02d", uptimeSec / 3600, (uptimeSec % 3600) / 60, uptimeSec % 60);
-      proxyUptimes.put(proxy.getId(), uptime);
+    protected ControlPanelController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend) {
+        super(proxyService, userService, environment, authenticationBackend);
     }
-    
-    int containerLimit = environment.getProperty("proxy.container-quantity-limit", Integer.class, 2);
-    map.put("withFileBrowser", proxyService.findProxy(p -> p.getSpec().getId().equals("filebrowser"), false) != null);
-    map.put("containerLimit", containerLimit);
-    map.put("proxies", proxies);
-    map.put("proxyUptimes", proxyUptimes);
-    map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
-    
-    return "panel";
-  }
+
+    @RequestMapping("/controlpanel")
+    private String panel(ModelMap map, HttpServletRequest request) {
+        prepareMap(map, request);
+        String username = getUserName(request);
+        List<Proxy> proxies = proxyService.getProxies(p -> p.getUserId().equals(username), false);
+
+        Map<String, String> proxyUptimes = new HashMap<>();
+        for (Proxy proxy : proxies) {
+            long uptimeSec = 0;
+            // if the proxy hasn't started up yet, the uptime should be zero
+            if (proxy.getStartupTimestamp() > 0) {
+                uptimeSec = (System.currentTimeMillis() - proxy.getStartupTimestamp()) / 1000;
+            }
+            String uptime = String.format("%d:%02d:%02d", uptimeSec / 3600, (uptimeSec % 3600) / 60, uptimeSec % 60);
+            proxyUptimes.put(proxy.getId(), uptime);
+        }
+
+        int containerLimit = environment.getProperty("proxy.container-quantity-limit", Integer.class, 2);
+        map.put("withFileBrowser", proxyService.findProxy(p -> p.getSpec().getId().equals("filebrowser"), false) != null);
+        map.put("containerLimit", containerLimit);
+        map.put("proxies", proxies);
+        map.put("proxyUptimes", proxyUptimes);
+        map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
+
+        return "panel";
+    }
 }

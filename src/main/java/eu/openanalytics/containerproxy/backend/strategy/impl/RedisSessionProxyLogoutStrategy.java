@@ -15,28 +15,28 @@ import javax.annotation.PostConstruct;
 @Component
 @ConditionalOnProperty(prefix = "spring.session", name = "store-type", havingValue = "redis")
 public class RedisSessionProxyLogoutStrategy implements IProxyLogoutStrategy {
-  private final Logger log = LogManager.getLogger(RedisSessionProxyLogoutStrategy.class);
-  private final ProxyService proxyService;
-  private final RedisSessionHelper redisSessionHelper;
-  
-  @Lazy
-  public RedisSessionProxyLogoutStrategy(ProxyService proxyService, RedisSessionHelper redisSessionHelper) {
-    this.proxyService = proxyService;
-    this.redisSessionHelper = redisSessionHelper;
-  }
-  
-  @PostConstruct
-  private void init() {
-    log.info("Enabled redis session logout strategy.");
-  }
-  
-  @Override
-  public void onLogout(String userId, boolean expired) {
-    if (redisSessionHelper.getSessionByUsername(userId).size() > 1 - (expired ? 1 : 0)) {
-      return;
+    private final Logger log = LogManager.getLogger(RedisSessionProxyLogoutStrategy.class);
+    private final ProxyService proxyService;
+    private final RedisSessionHelper redisSessionHelper;
+
+    @Lazy
+    public RedisSessionProxyLogoutStrategy(ProxyService proxyService, RedisSessionHelper redisSessionHelper) {
+        this.proxyService = proxyService;
+        this.redisSessionHelper = redisSessionHelper;
     }
-    for (Proxy proxy : proxyService.getProxies(p -> p.getUserId().equals(userId), true)) {
-      proxyService.stopProxy(proxy, true, true);
+
+    @PostConstruct
+    private void init() {
+        log.info("Enabled redis session logout strategy.");
     }
-  }
+
+    @Override
+    public void onLogout(String userId, boolean expired) {
+        if (redisSessionHelper.getSessionByUsername(userId).size() > 1 - (expired ? 1 : 0)) {
+            return;
+        }
+        for (Proxy proxy : proxyService.getProxies(p -> p.getUserId().equals(userId), true)) {
+            proxyService.stopProxy(proxy, true, true);
+        }
+    }
 }

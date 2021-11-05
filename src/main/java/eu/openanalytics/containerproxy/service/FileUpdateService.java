@@ -16,44 +16,44 @@ import java.security.NoSuchAlgorithmException;
 @RefreshScope
 @Service
 public class FileUpdateService extends Thread {
-  protected final Logger log = LogManager.getLogger(getClass());
-  
-  private final ConfigFileHelper configFileHelper;
-  private final ApplicationEventPublisher publisher;
-  
-  @Value("${proxy.config.interval:5000}")
-  private int interval;
-  
-  @Value("${proxy.config.auto-update:true}")
-  private boolean configAutoUpdate;
-  
-  public FileUpdateService(ConfigFileHelper configFileHelper, ApplicationEventPublisher publisher) {
-    this.configFileHelper = configFileHelper;
-    this.publisher = publisher;
-  }
-  
-  @PostConstruct
-  public void start() {
-    if (configAutoUpdate) {
-      log.info("Starting configuration auto detection, interval: {}ms", interval);
-      super.start();
+    protected final Logger log = LogManager.getLogger(getClass());
+
+    private final ConfigFileHelper configFileHelper;
+    private final ApplicationEventPublisher publisher;
+
+    @Value("${proxy.config.interval:5000}")
+    private int interval;
+
+    @Value("${proxy.config.auto-update:true}")
+    private boolean configAutoUpdate;
+
+    public FileUpdateService(ConfigFileHelper configFileHelper, ApplicationEventPublisher publisher) {
+        this.configFileHelper = configFileHelper;
+        this.publisher = publisher;
     }
-  }
-  
-  @Override
-  public void run() {
-    try {
-      String before = configFileHelper.getConfigHash();
-      while (true) {
-        String after = configFileHelper.getConfigHash();
-        if (!before.equals(after)) {
-          publisher.publishEvent(new ConfigUpdateEvent(this));
+
+    @PostConstruct
+    public void start() {
+        if (configAutoUpdate) {
+            log.info("Starting configuration auto detection, interval: {}ms", interval);
+            super.start();
         }
-        before = after;
-        Thread.sleep(interval);
-      }
-    } catch (NoSuchAlgorithmException | InterruptedException e) {
-      e.printStackTrace();
     }
-  }
+
+    @Override
+    public void run() {
+        try {
+            String before = configFileHelper.getConfigHash();
+            while (true) {
+                String after = configFileHelper.getConfigHash();
+                if (!before.equals(after)) {
+                    publisher.publishEvent(new ConfigUpdateEvent(this));
+                }
+                before = after;
+                Thread.sleep(interval);
+            }
+        } catch (NoSuchAlgorithmException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }

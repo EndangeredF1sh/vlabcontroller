@@ -6,7 +6,7 @@ import eu.openanalytics.containerproxy.model.spec.RuntimeSettingSpec;
 import eu.openanalytics.containerproxy.spec.ProxySpecException;
 
 public interface IRuntimeSettingType {
-  
-  void apply(RuntimeSetting setting, RuntimeSettingSpec settingSpec, ProxySpec targetSpec) throws ProxySpecException;
-  
+
+    void apply(RuntimeSetting setting, RuntimeSettingSpec settingSpec, ProxySpec targetSpec) throws ProxySpecException;
+
 }

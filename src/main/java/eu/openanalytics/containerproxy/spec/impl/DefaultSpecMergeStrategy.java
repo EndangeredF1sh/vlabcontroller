@@ -15,38 +15,39 @@ import java.util.UUID;
  */
 @Component
 public class DefaultSpecMergeStrategy implements IProxySpecMergeStrategy {
-  private final SettingTypeRegistry settingTypeRegistry;
-  
-  public DefaultSpecMergeStrategy(SettingTypeRegistry settingTypeRegistry) {
-    this.settingTypeRegistry = settingTypeRegistry;
-  }
-  
-  @Override
-  public ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException {
-    if (baseSpec == null && runtimeSpec == null) throw new ProxySpecException("No base or runtime proxy spec provided");
-    
-    ProxySpec finalSpec = new ProxySpec();
-    copySpec(baseSpec, finalSpec);
-    copySpec(runtimeSpec, finalSpec);
-    
-    if (runtimeSettings != null) {
-      for (RuntimeSetting setting : runtimeSettings) {
-        settingTypeRegistry.applySetting(setting, finalSpec);
-      }
+    private final SettingTypeRegistry settingTypeRegistry;
+
+    public DefaultSpecMergeStrategy(SettingTypeRegistry settingTypeRegistry) {
+        this.settingTypeRegistry = settingTypeRegistry;
     }
-    
-    if (finalSpec.getId() == null) {
-      var id = UUID.randomUUID().toString();
-      finalSpec.setId(id);
-      for (var containerSpec : finalSpec.getContainerSpecs()) {
-        containerSpec.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
-      }
+
+    @Override
+    public ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException {
+        if (baseSpec == null && runtimeSpec == null)
+            throw new ProxySpecException("No base or runtime proxy spec provided");
+
+        ProxySpec finalSpec = new ProxySpec();
+        copySpec(baseSpec, finalSpec);
+        copySpec(runtimeSpec, finalSpec);
+
+        if (runtimeSettings != null) {
+            for (RuntimeSetting setting : runtimeSettings) {
+                settingTypeRegistry.applySetting(setting, finalSpec);
+            }
+        }
+
+        if (finalSpec.getId() == null) {
+            var id = UUID.randomUUID().toString();
+            finalSpec.setId(id);
+            for (var containerSpec : finalSpec.getContainerSpecs()) {
+                containerSpec.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
+            }
+        }
+        return finalSpec;
     }
-    return finalSpec;
-  }
-  
-  protected void copySpec(ProxySpec from, ProxySpec to) {
-    if (from == null || to == null) return;
-    from.copy(to);
-  }
+
+    protected void copySpec(ProxySpec from, ProxySpec to) {
+        if (from == null || to == null) return;
+        from.copy(to);
+    }
 }
