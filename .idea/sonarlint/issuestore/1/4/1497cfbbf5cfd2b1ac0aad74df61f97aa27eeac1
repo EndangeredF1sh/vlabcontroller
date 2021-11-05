@@ -1,0 +1,7 @@
+
+
+java:S3305%"bInject this field value directly into "authenticationConfiguration", the only method that uses it.(Ş—ˆ8÷¨´«Í/
+]	java:S1254"<This block of commented-out lines of code should be removed.(ã‚Øªúÿÿÿÿ8¢º´«Í/
+X	java:S125e"<This block of commented-out lines of code should be removed.(’ÿé¾8ªº´«Í/
+i
+java:S1192G"GDefine a constant instead of duplicating this literal "/login" 3 times.(œ‹Â™üÿÿÿÿ8°º´«Í/

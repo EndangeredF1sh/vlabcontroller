@@ -2,5 +2,4 @@
 application.yml
 logs
 
-.idea
 *.iml

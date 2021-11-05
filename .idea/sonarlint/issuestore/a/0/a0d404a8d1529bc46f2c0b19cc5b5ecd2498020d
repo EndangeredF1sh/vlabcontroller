@@ -1,0 +1,16 @@
+
+K
+java:S1751>"5Remove this "break" statement or make it conditional.(›ûä·
+V
+java:S1193M"@Replace the usage of the "instanceof" operator by a catch block.(à Ä
+P	java:S125f"<This block of commented-out lines of code should be removed.(Œü
+^
+java:S1612š"BReplace this lambda with method reference 'Handlers::requestDump'.(ïÅ›îùÿÿÿÿ
+o
+java:S1602œ"SRemove useless curly braces around statement and then remove useless return keyword(Ù”œ–ıÿÿÿÿ
+j
+java:S1612œ"NReplace this lambda with method reference 'mappingManager::createHttpHandler'.(Ù”œ–ıÿÿÿÿ
+\
+java:S1192["FDefine a constant instead of duplicating this literal "false" 6 times.(¨°
+F
+java:S5411™"*Use the primitive boolean expression here.(½ÎÂÜûÿÿÿÿ

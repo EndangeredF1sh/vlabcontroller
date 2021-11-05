@@ -1,0 +1,7 @@
+
+W
+java:S34572"AFormat specifiers should be used instead of string concatenation.(ûêŒÄ
+M
+java:S1128"0Remove this unused import 'javax.inject.Inject'.(ì–íÔ8³ó»«Í/
+M
+java:S26292"7Use the built-in formatting to construct this argument.(ûêŒÄ

@@ -1,0 +1,23 @@
+
+T
+java:S1854"8Remove this useless assignment to local variable "user".(âñ‰òúÿÿÿÿ
+E
+java:S1481")Remove this unused "user" local variable.(âñ‰òúÿÿÿÿ
+W
+java:S1874—";Remove this use of "redirectUriTemplate"; it is deprecated.(¬¢ùúÿÿÿÿ
+n
+java:S3776¤"RRefactor this method to reduce its Cognitive Complexity from 66 to the 15 allowed.(¹¿ì•úÿÿÿÿ
+X
+java:S3457Ï"AFormat specifiers should be used instead of string concatenation.(ÜÒÉŠ
+]
+java:S3457×"AFormat specifiers should be used instead of string concatenation.(ØÉºÚøÿÿÿÿ
+G
+java:S2160ğ"+Override the "equals" method in this class.(Ñİ©–úÿÿÿÿ
+a
+java:S1192‹"JUse already-defined constant 'NAME' instead of duplicating its value here.(‰é¾ö
+]
+java:S1192Œ"FDefine a constant instead of duplicating this literal "email" 3 times.(ó™ìë
+@
+java:S2629¼"$Invoke method(s) only conditionally.(Ã¦ôÖüÿÿÿÿ
+i
+java:S2259‚"RA "NullPointerException" could be thrown; "getRequestAttributes" is nullable here.(–”åÍ

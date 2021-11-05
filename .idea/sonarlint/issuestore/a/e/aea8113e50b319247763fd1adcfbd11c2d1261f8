@@ -1,0 +1,28 @@
+
+g	java:S112b"FDefine and throw a dedicated exception instead of using a generic one.(ôõ¯«şÿÿÿÿ8‘íÇ€Ï/
+b	java:S112¢"FDefine and throw a dedicated exception instead of using a generic one.(ë¥Øh8‘íÇ€Ï/
+b	java:S112¯"FDefine and throw a dedicated exception instead of using a generic one.(ç¥÷8‘íÇ€Ï/
+O
+java:S11353"2Complete the task associated to this TODO comment.(Ãà—Ğ8•íÇ€Ï/
+c
+java:S3457Y"AFormat specifiers should be used instead of string concatenation.(Ğ˜£ÿÿÿÿÿ8—íÇ€Ï/
+c
+java:S3457`"AFormat specifiers should be used instead of string concatenation.(üßŸÃùÿÿÿÿ8˜íÇ€Ï/
+G
+java:S1181o"%Catch Exception instead of Throwable.(•”ø¾øÿÿÿÿ8œíÇ€Ï/
+Y
+java:S1117İ";Rename "realmId" which hides the field declared at line 80.(„ÿãè8ªíÇ€Ï/
+q
+java:S4719©"NReplace "com.google.common.base.Charsets.UTF_8" with "StandardCharsets.UTF_8".(•©Âšşÿÿÿÿ8ºíÇ€Ï/
+d
+java:S1192Ø"FDefine a constant instead of duplicating this literal "%s=%s" 5 times.(à‘´Ğ8¼íÇ€Ï/
+h
+java:S1192X"FDefine a constant instead of duplicating this literal "false" 3 times.(ŠĞŸİşÿÿÿÿ8¼íÇ€Ï/
+W
+java:S1141m"5Extract this nested try block into a separate method.(¡»¢üùÿÿÿÿ8¼íÇ€Ï/
+Y
+java:S2629Y"7Use the built-in formatting to construct this argument.(Ğ˜£ÿÿÿÿÿ8½íÇ€Ï/
+Y
+java:S2629`"7Use the built-in formatting to construct this argument.(üßŸÃùÿÿÿÿ8½íÇ€Ï/
+p
+java:S2095å"MUse try-with-resources or close this "FileInputStream" in a "finally" clause.(¸ÿÄüüÿÿÿÿ8ÛíÇ€Ï/

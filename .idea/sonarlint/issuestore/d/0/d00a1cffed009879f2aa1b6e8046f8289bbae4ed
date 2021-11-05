@@ -1,0 +1,29 @@
+
+\
+java:S3457s"AFormat specifiers should be used instead of string concatenation.(Ùï¢àıÿÿÿÿ
+S
+java:S1612"<Replace this lambda with method reference 'this::checkPong'.(ÓöãÛ
+R	java:S125"<This block of commented-out lines of code should be removed.(àÖ­Ğ
+?
+java:S1940®")Use the opposite operator ("<=") instead.(ªÕì>
+R	java:S125±"<This block of commented-out lines of code should be removed.(àÖ­Ğ
+i
+java:S3776Ñ"RRefactor this method to reduce its Cognitive Complexity from 66 to the 15 allowed.(“–ış
+A
+java:S1181›"%Catch Exception instead of Throwable.(•”ø¾øÿÿÿÿ
+d
+java:S1871Û"MThis branch's code block is the same as the block for the branch on line 218.(³ó²Â
+5
+java:S2178‹"Correct this "|" to "||".(ª Ë¼úÿÿÿÿ
+X
+java:S3457œ"AFormat specifiers should be used instead of string concatenation.(¾Ü†¦
+u
+java:S2142¡"^Either re-interrupt this method or rethrow the "InterruptedException" that can be caught here.(ä ¹€
+?	java:S108¡")Either remove or fill this block of code.(ä ¹€
+M
+java:S1128"0Remove this unused import 'javax.inject.Inject'.(ì–íÔ8¿ôÅªÍ/
+B
+java:S3398{",Move this method into "InactiveProxyKiller".(ï¹†¾
+t	java:S135Ù"YReduce the total number of break and continue statements in this loop to use at most one.(Ë•¢Ñşÿÿÿÿ
+;
+java:S2629ß"$Invoke method(s) only conditionally.(ÅÈ©Í

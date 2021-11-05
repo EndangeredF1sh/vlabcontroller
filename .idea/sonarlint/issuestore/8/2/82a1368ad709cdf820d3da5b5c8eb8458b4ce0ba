@@ -1,0 +1,7 @@
+
+M
+java:S1128"0Remove this unused import 'javax.inject.Inject'.(ì–íÔ8—ò½«Í/
+Q
+java:S1068"/Remove this unused "environment" private field.(«¢Ùôûÿÿÿÿ8—ò½«Í/
+O
+java:S3516$"9Refactor this method to not always return the same value.(ôÔÐŒ

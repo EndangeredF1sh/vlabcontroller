@@ -1,0 +1,23 @@
+
+U
+java:S1118":Add a private constructor to hide the implicit public one.(È…µàþÿÿÿÿ
+T
+java:S1874"9Remove this use of "getRequestCookies"; it is deprecated.(åÝØ¢üÿÿÿÿ
+A
+java:S10751"&Remove this hard-coded path-delimiter.(ÿÆûõÿÿÿÿÿ
+i
+java:S1612H"NReplace this lambda with method reference 'ServletRequestContext::getSession'.(êå®´ýÿÿÿÿ
+e
+java:S1612J"OReplace this lambda with method reference 'SecurityContext::getAuthentication'.(Üâ¨¹
+f
+java:S1612L"IReplace this lambda with method reference 'Authentication::getPrincipal'.(­ª÷Ù8ë³Þ©Í/
+T
+java:S1874T"9Remove this use of "getRequestCookies"; it is deprecated.(±ÚÆ¹øÿÿÿÿ
+H
+java:S1135h"2Complete the task associated to this TODO comment.(²öÙµ
+k
+java:S1104b"UMake principal a static final constant or non-public and provide accessors if needed.(ýžËÚ
+q
+java:S1104c"VMake authHeader a static final constant or non-public and provide accessors if needed.(ÃÀçàûÿÿÿÿ
+q
+java:S1104d"VMake jSessionId a static final constant or non-public and provide accessors if needed.(ö¦Ñ½øÿÿÿÿ

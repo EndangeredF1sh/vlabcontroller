@@ -1,0 +1,9 @@
+
+[
+java:S1612:"@Replace this lambda with method reference 'String::toUpperCase'.(‰Ñ€êúÿÿÿÿ
+f
+java:S1104A"PMake name a static final constant or non-public and provide accessors if needed.( şÍ¾
+o
+java:S1104B"TMake password a static final constant or non-public and provide accessors if needed.(¼şòüÿÿÿÿ
+g
+java:S1104C"QMake roles a static final constant or non-public and provide accessors if needed.(å„–Å

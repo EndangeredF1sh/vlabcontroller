@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteRepositoriesConfiguration">
+    <remote-repository>
+      <option name="id" value="spring" />
+      <option name="name" value="spring" />
+      <option name="url" value="https://repo.spring.io/plugins-release/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Central Repository" />
+      <option name="url" value="https://repo.maven.apache.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="oa-nexus-snapshots" />
+      <option name="name" value="OpenAnalytics Snapshots Repository" />
+      <option name="url" value="https://nexus.openanalytics.eu/repository/snapshots" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="local-repository" />
+      <option name="name" value="local-repository" />
+      <option name="url" value="file://E:\Git\github.com\stevefan1999\containerproxy\shinyproxy/repo" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="oa-nexus-releases" />
+      <option name="name" value="OpenAnalytics Snapshots Repository" />
+      <option name="url" value="https://nexus.openanalytics.eu/repository/releases" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="central" />
+      <option name="name" value="Maven Central repository" />
+      <option name="url" value="https://repo1.maven.org/maven2" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="spring-releases" />
+      <option name="name" value="Spring Releases" />
+      <option name="url" value="https://repo.spring.io/release" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="jboss.community" />
+      <option name="name" value="JBoss Community repository" />
+      <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="clojars" />
+      <option name="name" value="clojars" />
+      <option name="url" value="https://clojars.org/repo/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="repository.spring.milestone" />
+      <option name="name" value="Spring Milestone Repository" />
+      <option name="url" value="https://repo.spring.io/milestone" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="alfresco" />
+      <option name="name" value="alfresco" />
+      <option name="url" value="https://artifacts.alfresco.com/nexus/content/repositories/public/" />
+    </remote-repository>
+  </component>
+</project>

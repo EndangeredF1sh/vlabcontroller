@@ -1,0 +1,21 @@
+
+`
+java:S1124%"EReorder the modifiers to comply with the Java Language Specification.(Áœ§²ùÿÿÿÿ
+M
+java:S1128"0Remove this unused import 'javax.inject.Inject'.(ì–íÔ8§ä·«Í/
+^
+java:S1068%"CRemove this unused "ATTRIBUTE_USER_INITIATED_LOGOUT" private field.(Áœ§²ùÿÿÿÿ
+g
+java:S1192¹"KDefine a constant instead of duplicating this literal "firstLogin" 3 times.(ûç£èýÿÿÿÿ
+:
+java:S2629™"$Invoke method(s) only conditionally.(Ôöè
+:
+java:S2629§"$Invoke method(s) only conditionally.(’çò]
+;
+java:S2629À"$Invoke method(s) only conditionally.(»°²å
+;
+java:S2629à"$Invoke method(s) only conditionally.(£‹Ôß
+@
+java:S2629è"$Invoke method(s) only conditionally.(‚•¹–ÿÿÿÿÿ
+@
+java:S2629ö"$Invoke method(s) only conditionally.(šüÓýÿÿÿÿÿ
