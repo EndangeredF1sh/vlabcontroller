@@ -21,36 +21,36 @@ import java.util.regex.Pattern;
  */
 @Component
 public class SettingSpecMapper {
-  
-  private static final String PREFIX_CONTAINER = "container";
-  private static final String PATTERN_CONTAINER_INDEXED = PREFIX_CONTAINER + "\\[(\\d+)\\]";
-  
-  public void mapValue(Object value, RuntimeSettingSpec spec, ProxySpec target) {
-    String[] nameParts = spec.getName().split("\\.");
-    if (nameParts.length == 0) doFail(spec, "cannot determing mapping for name");
-    
-    Object targetObject = target;
-    String fieldName = nameParts[0];
-    
-    if (nameParts[0].equals(PREFIX_CONTAINER)) {
-      if (target.getContainerSpecs().isEmpty()) doFail(spec, "proxy spec has no container specs");
-      targetObject = target.getContainerSpecs().get(0);
-      if (nameParts.length < 2) doFail(spec, "no container field specified");
-      fieldName = nameParts[1];
-    } else if (Pattern.matches(PATTERN_CONTAINER_INDEXED, nameParts[0])) {
-      Matcher matcher = Pattern.compile(PATTERN_CONTAINER_INDEXED).matcher(nameParts[0]);
-      int index = Integer.valueOf(matcher.group(1));
-      if (index >= target.getContainerSpecs().size()) doFail(spec, "container index too high");
-      targetObject = target.getContainerSpecs().get(index);
-      if (nameParts.length < 2) doFail(spec, "no container field specified");
-      fieldName = nameParts[1];
+
+    private static final String PREFIX_CONTAINER = "container";
+    private static final String PATTERN_CONTAINER_INDEXED = PREFIX_CONTAINER + "\\[(\\d+)\\]";
+
+    public void mapValue(Object value, RuntimeSettingSpec spec, ProxySpec target) {
+        String[] nameParts = spec.getName().split("\\.");
+        if (nameParts.length == 0) doFail(spec, "cannot determing mapping for name");
+
+        Object targetObject = target;
+        String fieldName = nameParts[0];
+
+        if (nameParts[0].equals(PREFIX_CONTAINER)) {
+            if (target.getContainerSpecs().isEmpty()) doFail(spec, "proxy spec has no container specs");
+            targetObject = target.getContainerSpecs().get(0);
+            if (nameParts.length < 2) doFail(spec, "no container field specified");
+            fieldName = nameParts[1];
+        } else if (Pattern.matches(PATTERN_CONTAINER_INDEXED, nameParts[0])) {
+            Matcher matcher = Pattern.compile(PATTERN_CONTAINER_INDEXED).matcher(nameParts[0]);
+            int index = Integer.valueOf(matcher.group(1));
+            if (index >= target.getContainerSpecs().size()) doFail(spec, "container index too high");
+            targetObject = target.getContainerSpecs().get(index);
+            if (nameParts.length < 2) doFail(spec, "no container field specified");
+            fieldName = nameParts[1];
+        }
+
+        BeanWrapper wrapper = new BeanWrapperImpl(targetObject);
+        wrapper.setPropertyValue(fieldName, value);
     }
-    
-    BeanWrapper wrapper = new BeanWrapperImpl(targetObject);
-    wrapper.setPropertyValue(fieldName, value);
-  }
-  
-  private void doFail(RuntimeSettingSpec spec, String msg) {
-    throw new ProxySpecException("Cannot map setting " + spec.getName() + ":" + msg);
-  }
+
+    private void doFail(RuntimeSettingSpec spec, String msg) {
+        throw new ProxySpecException("Cannot map setting " + spec.getName() + ":" + msg);
+    }
 }

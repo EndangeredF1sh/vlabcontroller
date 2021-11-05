@@ -37,32 +37,32 @@ import java.util.Map;
 
 @Controller
 public class IndexController extends BaseController {
-  protected IndexController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend) {
-    super(proxyService, userService, environment, authenticationBackend);
-  }
-  
-  @RequestMapping("/")
-  private Object index(ModelMap map, HttpServletRequest request) {
-    String landingPage = environment.getProperty("proxy.landing-page", "/");
-    if (!landingPage.equals("/")) return new RedirectView(landingPage);
-    
-    prepareMap(map, request);
-    
-    ProxySpec[] apps = proxyService.getProxySpecs(null, false).toArray(new ProxySpec[0]);
-    map.put("apps", apps);
-    
-    Map<ProxySpec, String> appLogos = new HashMap<>();
-    map.put("appLogos", appLogos);
-    
-    boolean displayAppLogos = false;
-    for (ProxySpec app : apps) {
-      if (app.getLogoURL() != null) {
-        displayAppLogos = true;
-        appLogos.put(app, resolveImageURI(app.getLogoURL()));
-      }
+    protected IndexController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend) {
+        super(proxyService, userService, environment, authenticationBackend);
     }
-    map.put("displayAppLogos", displayAppLogos);
-    map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
-    return "index";
-  }
+
+    @RequestMapping("/")
+    private Object index(ModelMap map, HttpServletRequest request) {
+        String landingPage = environment.getProperty("proxy.landing-page", "/");
+        if (!landingPage.equals("/")) return new RedirectView(landingPage);
+
+        prepareMap(map, request);
+
+        ProxySpec[] apps = proxyService.getProxySpecs(null, false).toArray(new ProxySpec[0]);
+        map.put("apps", apps);
+
+        Map<ProxySpec, String> appLogos = new HashMap<>();
+        map.put("appLogos", appLogos);
+
+        boolean displayAppLogos = false;
+        for (ProxySpec app : apps) {
+            if (app.getLogoURL() != null) {
+                displayAppLogos = true;
+                appLogos.put(app, resolveImageURI(app.getLogoURL()));
+            }
+        }
+        map.put("displayAppLogos", displayAppLogos);
+        map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
+        return "index";
+    }
 }

@@ -19,49 +19,49 @@ import java.util.function.Consumer;
 
 @Configuration
 class StatCollectorFactory {
-  
-  private final Logger log = LogManager.getLogger(StatCollectorFactory.class);
-  
-  private final Environment environment;
-  private final ApplicationContext applicationContext;
-  private final StatCollectorProperties statCollectorProperties;
-  
-  public StatCollectorFactory(Environment environment, ApplicationContext applicationContext, StatCollectorProperties statCollectorProperties) {
-    this.environment = environment;
-    this.applicationContext = applicationContext;
-    this.statCollectorProperties = statCollectorProperties;
-  }
-  
-  @Bean
-  public IStatCollector statsCollector() {
-    // create beans manually, spring will not create beans automatically when null returned
-    if (!statCollectorProperties.backendExists()) {
-      log.info("Disabled. Usage statistics will not be processed.");
-      return null;
+
+    private final Logger log = LogManager.getLogger(StatCollectorFactory.class);
+
+    private final Environment environment;
+    private final ApplicationContext applicationContext;
+    private final StatCollectorProperties statCollectorProperties;
+
+    public StatCollectorFactory(Environment environment, ApplicationContext applicationContext, StatCollectorProperties statCollectorProperties) {
+        this.environment = environment;
+        this.applicationContext = applicationContext;
+        this.statCollectorProperties = statCollectorProperties;
     }
-    
-    ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
-    DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getAutowireCapableBeanFactory();
-    
-    Consumer<Class<?>> createBean = (Class<?> klass) -> {
-      BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(klass);
-      defaultListableBeanFactory.registerBeanDefinition(klass.getName() + "Bean", beanDefinitionBuilder.getBeanDefinition());
-    };
-    
-    if (statCollectorProperties.getInfluxURL().contains("/write?db=")) {
-      createBean.accept(InfluxDBCollector.class);
-      log.info("Influx DB backend enabled, sending usage statics to {}", statCollectorProperties.getInfluxURL());
+
+    @Bean
+    public IStatCollector statsCollector() {
+        // create beans manually, spring will not create beans automatically when null returned
+        if (!statCollectorProperties.backendExists()) {
+            log.info("Disabled. Usage statistics will not be processed.");
+            return null;
+        }
+
+        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
+        DefaultListableBeanFactory defaultListableBeanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getAutowireCapableBeanFactory();
+
+        Consumer<Class<?>> createBean = (Class<?> klass) -> {
+            BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(klass);
+            defaultListableBeanFactory.registerBeanDefinition(klass.getName() + "Bean", beanDefinitionBuilder.getBeanDefinition());
+        };
+
+        if (statCollectorProperties.getInfluxURL().contains("/write?db=")) {
+            createBean.accept(InfluxDBCollector.class);
+            log.info("Influx DB backend enabled, sending usage statics to {}", statCollectorProperties.getInfluxURL());
+        }
+        if (statCollectorProperties.getJdbcURL().contains("jdbc")) {
+            createBean.accept(JDBCCollector.class);
+            log.info("JDBC backend enabled, sending usage statistics to {}", statCollectorProperties.getJdbcURL());
+
+        }
+        if (statCollectorProperties.getMicrometerURL().contains("micrometer")) {
+            createBean.accept(Micrometer.class);
+            log.info("Prometheus (Micrometer) backend enabled");
+        }
+
+        return null;
     }
-    if (statCollectorProperties.getJdbcURL().contains("jdbc")) {
-      createBean.accept(JDBCCollector.class);
-      log.info("JDBC backend enabled, sending usage statistics to {}", statCollectorProperties.getJdbcURL());
-      
-    }
-    if (statCollectorProperties.getMicrometerURL().contains("micrometer")) {
-      createBean.accept(Micrometer.class);
-      log.info("Prometheus (Micrometer) backend enabled");
-    }
-    
-    return null;
-  }
 }

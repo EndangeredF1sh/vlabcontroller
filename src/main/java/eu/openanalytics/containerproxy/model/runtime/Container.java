@@ -11,12 +11,17 @@ import java.util.List;
 import java.util.Map;
 
 public class Container {
-  @Getter @Setter private String id;
-  @Getter @Setter private List<ContainerSpec> specs = new ArrayList<>();
-  @Setter private Map<String, Object> parameters = new HashMap<>();
-  
-  @JsonIgnore
-  public Map<String, Object> getParameters() {
-    return parameters;
-  }
+    @Getter
+    @Setter
+    private String id;
+    @Getter
+    @Setter
+    private List<ContainerSpec> specs = new ArrayList<>();
+    @Setter
+    private Map<String, Object> parameters = new HashMap<>();
+
+    @JsonIgnore
+    public Map<String, Object> getParameters() {
+        return parameters;
+    }
 }

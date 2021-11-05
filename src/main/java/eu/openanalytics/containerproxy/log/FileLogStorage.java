@@ -12,16 +12,16 @@ import java.util.Arrays;
 import static com.pivovarit.function.ThrowingFunction.unchecked;
 
 public class FileLogStorage extends AbstractLogStorage {
-  
-  @Override
-  public void initialize() throws IOException {
-    super.initialize();
-    Files.createDirectories(Paths.get(containerLogPath));
-  }
-  
-  @Override
-  public OutputStream[] createOutputStreams(Proxy proxy) throws IOException {
-    return Arrays.stream(getLogs(proxy)).map(unchecked(FileOutputStream::new)).toArray(OutputStream[]::new);
-  }
-  
+
+    @Override
+    public void initialize() throws IOException {
+        super.initialize();
+        Files.createDirectories(Paths.get(containerLogPath));
+    }
+
+    @Override
+    public OutputStream[] createOutputStreams(Proxy proxy) throws IOException {
+        return Arrays.stream(getLogs(proxy)).map(unchecked(FileOutputStream::new)).toArray(OutputStream[]::new);
+    }
+
 }

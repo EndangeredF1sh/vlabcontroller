@@ -7,16 +7,16 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DefaultTargetMappingStrategy implements IProxyTargetMappingStrategy {
-  
-  public static final String DEFAULT_MAPPING_KEY = "default";
-  
-  public String createMapping(String mappingKey, Container container, Proxy proxy) {
-    String mapping = proxy.getId();
-    if (!mappingKey.equalsIgnoreCase(DEFAULT_MAPPING_KEY)) {
-      // For non-default mappings, also append the mapping key
-      mapping += "/" + mappingKey;
+
+    public static final String DEFAULT_MAPPING_KEY = "default";
+
+    public String createMapping(String mappingKey, Container container, Proxy proxy) {
+        String mapping = proxy.getId();
+        if (!mappingKey.equalsIgnoreCase(DEFAULT_MAPPING_KEY)) {
+            // For non-default mappings, also append the mapping key
+            mapping += "/" + mappingKey;
+        }
+        return mapping;
     }
-    return mapping;
-  }
-  
+
 }

@@ -7,7 +7,7 @@ import eu.openanalytics.containerproxy.model.runtime.Proxy;
  * If a proxy is not responsive, the launch will be aborted and an error will be generated.
  */
 public interface IProxyTestStrategy {
-  
-  boolean testProxy(Proxy proxy);
-  
+
+    boolean testProxy(Proxy proxy);
+
 }

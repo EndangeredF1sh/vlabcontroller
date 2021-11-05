@@ -25,16 +25,16 @@ import java.util.Set;
  * </p>
  */
 public interface IProxySpecMergeStrategy {
-  
-  /**
-   * Create a final ProxySpec from a set of input (see class description for more info).
-   *
-   * @param baseSpec        The base spec, or null if the strategy allows it.
-   * @param runtimeSpec     The runtime spec, or null if the strategy allows it.
-   * @param runtimeSettings The runtime settings, or null if the strategy allows it.
-   * @return A ProxySpec that is fully configured and can be used to instantiate a new Proxy.
-   * @throws ProxySpecException If the spec cannot be created for any reason.
-   */
-	ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException;
- 
+
+    /**
+     * Create a final ProxySpec from a set of input (see class description for more info).
+     *
+     * @param baseSpec        The base spec, or null if the strategy allows it.
+     * @param runtimeSpec     The runtime spec, or null if the strategy allows it.
+     * @param runtimeSettings The runtime settings, or null if the strategy allows it.
+     * @return A ProxySpec that is fully configured and can be used to instantiate a new Proxy.
+     * @throws ProxySpecException If the spec cannot be created for any reason.
+     */
+    ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException;
+
 }

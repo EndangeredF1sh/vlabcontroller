@@ -10,7 +10,7 @@ import eu.openanalytics.containerproxy.model.runtime.Proxy;
  * "/containerId/mymapping" which would map into port 8080 of the container.
  */
 public interface IProxyTargetMappingStrategy {
-  
-  String createMapping(String mappingKey, Container container, Proxy proxy);
-  
+
+    String createMapping(String mappingKey, Container container, Proxy proxy);
+
 }
