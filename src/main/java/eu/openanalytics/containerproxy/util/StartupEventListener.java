@@ -23,9 +23,7 @@ public class StartupEventListener {
   public void onStartup(ApplicationReadyEvent event) {
     StringBuilder startupMsg = new StringBuilder("Started ");
     startupMsg.append(buildProperties.getName()).append(" ");
-    startupMsg.append(buildProperties.getVersion()).append(" (");
-    startupMsg.append("ContainerProxy ");
-    startupMsg.append(buildProperties.get("containerProxyVersion")).append(")");
+    startupMsg.append(buildProperties.getVersion());
     LOGGER.info(startupMsg.toString());
   }
 }
