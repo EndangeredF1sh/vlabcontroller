@@ -49,13 +49,13 @@ public class S3LogStorage extends AbstractLogStorage {
         }
 
         s3 = AmazonS3ClientBuilder.standard()
-                .withEndpointConfiguration(new EndpointConfiguration(endpoint, null))
-                .enablePathStyleAccess()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, accessSecret)))
-                .build();
+            .withEndpointConfiguration(new EndpointConfiguration(endpoint, null))
+            .enablePathStyleAccess()
+            .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, accessSecret)))
+            .build();
         transferMgr = TransferManagerBuilder.standard()
-                .withS3Client(s3)
-                .build();
+            .withS3Client(s3)
+            .build();
     }
 
     @Override

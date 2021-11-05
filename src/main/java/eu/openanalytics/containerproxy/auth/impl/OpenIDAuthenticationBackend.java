@@ -81,26 +81,26 @@ public class OpenIDAuthenticationBackend implements IAuthenticationBackend {
         anyRequestConfigurer.authenticated();
 
         http
-                .oauth2Login()
-                .loginPage("/login")
-                .clientRegistrationRepository(clientRegistrationRepo)
-                .authorizedClientRepository(oAuth2AuthorizedClientRepository)
-                .authorizationEndpoint()
-                .authorizationRequestResolver(new FixedDefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepo, OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI))
-                .and()
-                .failureHandler(new AuthenticationFailureHandler() {
+            .oauth2Login()
+            .loginPage("/login")
+            .clientRegistrationRepository(clientRegistrationRepo)
+            .authorizedClientRepository(oAuth2AuthorizedClientRepository)
+            .authorizationEndpoint()
+            .authorizationRequestResolver(new FixedDefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepo, OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI))
+            .and()
+            .failureHandler(new AuthenticationFailureHandler() {
 
-                    @Override
-                    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                                                        AuthenticationException exception) throws IOException, ServletException {
-                        log.error(exception);
-                        response.sendRedirect(ServletUriComponentsBuilder.fromCurrentContextPath().path("/auth-error").build().toUriString());
-                    }
+                @Override
+                public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
+                                                    AuthenticationException exception) throws IOException, ServletException {
+                    log.error(exception);
+                    response.sendRedirect(ServletUriComponentsBuilder.fromCurrentContextPath().path("/auth-error").build().toUriString());
+                }
 
-                })
-                .userInfoEndpoint()
-                .userAuthoritiesMapper(createAuthoritiesMapper())
-                .oidcUserService(createOidcUserService());
+            })
+            .userInfoEndpoint()
+            .userAuthoritiesMapper(createAuthoritiesMapper())
+            .oidcUserService(createOidcUserService());
     }
 
     @Override
@@ -110,8 +110,8 @@ public class OpenIDAuthenticationBackend implements IAuthenticationBackend {
 
     public String getLoginRedirectURI() {
         return SessionHelper.getContextPath(environment, false)
-                + OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI
-                + "/" + REG_ID;
+            + OAuth2AuthorizationRequestRedirectFilter.DEFAULT_AUTHORIZATION_REQUEST_BASE_URI
+            + "/" + REG_ID;
     }
 
     @Override
@@ -147,17 +147,17 @@ public class OpenIDAuthenticationBackend implements IAuthenticationBackend {
         }
 
         ClientRegistration client = ClientRegistration.withRegistrationId(REG_ID)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .clientName(REG_ID)
-                .redirectUriTemplate("{baseUrl}/login/oauth2/code/{registrationId}")
-                .scope(scopes.toArray(new String[scopes.size()]))
-                .userNameAttributeName(environment.getProperty("proxy.openid.username-attribute", "email"))
-                .authorizationUri(environment.getProperty("proxy.openid.auth-url"))
-                .tokenUri(environment.getProperty("proxy.openid.token-url"))
-                .jwkSetUri(environment.getProperty("proxy.openid.jwks-url"))
-                .clientId(environment.getProperty("proxy.openid.client-id"))
-                .clientSecret(environment.getProperty("proxy.openid.client-secret"))
-                .build();
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .clientName(REG_ID)
+            .redirectUriTemplate("{baseUrl}/login/oauth2/code/{registrationId}")
+            .scope(scopes.toArray(new String[scopes.size()]))
+            .userNameAttributeName(environment.getProperty("proxy.openid.username-attribute", "email"))
+            .authorizationUri(environment.getProperty("proxy.openid.auth-url"))
+            .tokenUri(environment.getProperty("proxy.openid.token-url"))
+            .jwkSetUri(environment.getProperty("proxy.openid.jwks-url"))
+            .clientId(environment.getProperty("proxy.openid.client-id"))
+            .clientSecret(environment.getProperty("proxy.openid.client-secret"))
+            .build();
 
         return new InMemoryClientRegistrationRepository(Collections.singletonList(client));
     }
@@ -176,10 +176,10 @@ public class OpenIDAuthenticationBackend implements IAuthenticationBackend {
                         if (log.isDebugEnabled()) {
                             String lineSep = System.getProperty("line.separator");
                             String claims = idToken.getClaims().entrySet().stream()
-                                    .map(e -> String.format("%s -> %s", e.getKey(), e.getValue()))
-                                    .collect(Collectors.joining(lineSep));
+                                .map(e -> String.format("%s -> %s", e.getKey(), e.getValue()))
+                                .collect(Collectors.joining(lineSep));
                             log.debug(String.format("Checking for roles in claim '%s'. Available claims in ID token (%d):%s%s",
-                                    rolesClaimName, idToken.getClaims().size(), lineSep, claims));
+                                rolesClaimName, idToken.getClaims().size(), lineSep, claims));
                         }
 
                         Object claimValue = idToken.getClaims().get(rolesClaimName);

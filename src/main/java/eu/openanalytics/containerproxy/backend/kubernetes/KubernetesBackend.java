@@ -130,127 +130,127 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var apiVersion = getProperty(PROPERTY_API_VERSION, DEFAULT_API_VERSION);
 
         var imagePullSecrets = Optional.ofNullable(getProperty(PROPERTY_IMG_PULL_SECRET))
-                .map(List::of)
-                .or(() -> Optional.ofNullable(getProperty(PROPERTY_IMG_PULL_SECRETS)).map(x -> x.split(",")).map(List::of))
-                .orElse(List.of())
-                .stream().map(LocalObjectReference::new).collect(Collectors.toList());
+            .map(List::of)
+            .or(() -> Optional.ofNullable(getProperty(PROPERTY_IMG_PULL_SECRETS)).map(x -> x.split(",")).map(List::of))
+            .orElse(List.of())
+            .stream().map(LocalObjectReference::new).collect(Collectors.toList());
 
         log.debug("imagePullSecrets: {}", imagePullSecrets);
 
         log.debug("all labels (array): {}", specs.stream()
-                .map(ContainerSpec::getLabels).collect(Collectors.toList()));
+            .map(ContainerSpec::getLabels).collect(Collectors.toList()));
 
         var allLabels = specs.stream()
-                .flatMap(x -> x.getLabels().entrySet().stream())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            .flatMap(x -> x.getLabels().entrySet().stream())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         log.debug("all labels (map): {}", allLabels);
 
         var objectMetaBuilder = new ObjectMetaBuilder()
-                .withNamespace(kubeNamespace)
-                .withName("sp-pod-" + container.getId())
-                .addToLabels(allLabels)
-                .addToLabels(identifierLabel, identifierValue)
-                .addToLabels("app", container.getId());
+            .withNamespace(kubeNamespace)
+            .withName("sp-pod-" + container.getId())
+            .addToLabels(allLabels)
+            .addToLabels(identifierLabel, identifierValue)
+            .addToLabels("app", container.getId());
 
         var podBuilder = new PodBuilder()
-                .withApiVersion(apiVersion)
-                .withKind("Pod")
-                .withMetadata(objectMetaBuilder.build());
+            .withApiVersion(apiVersion)
+            .withKind("Pod")
+            .withMetadata(objectMetaBuilder.build());
 
         // Handle runtime labels
         specs.stream()
-                .flatMap(x -> x.getRuntimeLabels().entrySet().stream())
-                .forEach(runtimeLabel -> {
-                    if (runtimeLabel.getValue().getFirst()) {
-                        objectMetaBuilder.addToLabels(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
-                    } else {
-                        objectMetaBuilder.addToAnnotations(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
-                    }
-                });
+            .flatMap(x -> x.getRuntimeLabels().entrySet().stream())
+            .forEach(runtimeLabel -> {
+                if (runtimeLabel.getValue().getFirst()) {
+                    objectMetaBuilder.addToLabels(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
+                } else {
+                    objectMetaBuilder.addToAnnotations(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
+                }
+            });
 
 
         List<Volume> volumes = new ArrayList<>();
         var containers = specs.stream()
-                .map(unchecked(spec -> {
-                    var volumeStrings = spec.getVolumes().stream()
-                            .map(x -> x.split(":"))
-                            .map(x -> Pair.of(x[0], x[1]))
-                            .collect(Collectors.toList());
+            .map(unchecked(spec -> {
+                var volumeStrings = spec.getVolumes().stream()
+                    .map(x -> x.split(":"))
+                    .map(x -> Pair.of(x[0], x[1]))
+                    .collect(Collectors.toList());
 
-                    var volumeMounts = new ArrayList<VolumeMount>();
-                    for (var i = 0; i < volumeStrings.size(); i++) {
-                        var name = "shinyproxy-volume-" + i;
-                        var x = volumeStrings.get(i);
-                        var volume = new VolumeBuilder()
-                                .withName(name)
-                                .withNewPersistentVolumeClaim(x.getFirst(), false)
-                                .build();
-                        var volumeMount = new VolumeMountBuilder()
-                                .withName(name)
-                                .withMountPath(x.getSecond())
-                                .build();
+                var volumeMounts = new ArrayList<VolumeMount>();
+                for (var i = 0; i < volumeStrings.size(); i++) {
+                    var name = "shinyproxy-volume-" + i;
+                    var x = volumeStrings.get(i);
+                    var volume = new VolumeBuilder()
+                        .withName(name)
+                        .withNewPersistentVolumeClaim(x.getFirst(), false)
+                        .build();
+                    var volumeMount = new VolumeMountBuilder()
+                        .withName(name)
+                        .withMountPath(x.getSecond())
+                        .build();
 
-                        volumes.add(volume);
-                        volumeMounts.add(volumeMount);
-                    }
+                    volumes.add(volume);
+                    volumeMounts.add(volumeMount);
+                }
 
-                    var envVars = buildEnv(spec, proxy).stream()
-                            .map(envString -> {
-                                var e = envString.split("=");
-                                if (e.length == 1) e = new String[]{e[0], ""};
-                                if (e.length > 2) e[1] = envString.substring(envString.indexOf('=') + 1);
-                                if (!e[1].toLowerCase().startsWith(SECRET_KEY_REF.toLowerCase())) {
-                                    return Optional.of(new EnvVar(e[0], e[1], null));
-                                }
-                                var ref = e[1].split(":");
-                                if (ref.length != 3) {
-                                    log.warn(String.format("Invalid secret key reference: %s. Expected format: '%s:<name>:<key>'", envString, SECRET_KEY_REF));
-                                    return Optional.<EnvVar>empty();
-                                }
-                                var secretKeyRef = new SecretKeySelectorBuilder()
-                                        .withName(ref[1])
-                                        .withKey(ref[2])
-                                        .build();
-                                var envVarSourceBuilder = new EnvVarSourceBuilder()
-                                        .withSecretKeyRef(secretKeyRef);
-                                return Optional.of(new EnvVar(e[0], null, envVarSourceBuilder.build()));
-                            })
-                            .flatMap(Optional::stream)
-                            .collect(Collectors.toList());
-
-                    var security = new SecurityContextBuilder()
-                            .withPrivileged(isPrivileged() || spec.isPrivileged())
+                var envVars = buildEnv(spec, proxy).stream()
+                    .map(envString -> {
+                        var e = envString.split("=");
+                        if (e.length == 1) e = new String[]{e[0], ""};
+                        if (e.length > 2) e[1] = envString.substring(envString.indexOf('=') + 1);
+                        if (!e[1].toLowerCase().startsWith(SECRET_KEY_REF.toLowerCase())) {
+                            return Optional.of(new EnvVar(e[0], e[1], null));
+                        }
+                        var ref = e[1].split(":");
+                        if (ref.length != 3) {
+                            log.warn(String.format("Invalid secret key reference: %s. Expected format: '%s:<name>:<key>'", envString, SECRET_KEY_REF));
+                            return Optional.<EnvVar>empty();
+                        }
+                        var secretKeyRef = new SecretKeySelectorBuilder()
+                            .withName(ref[1])
+                            .withKey(ref[2])
                             .build();
+                        var envVarSourceBuilder = new EnvVarSourceBuilder()
+                            .withSecretKeyRef(secretKeyRef);
+                        return Optional.of(new EnvVar(e[0], null, envVarSourceBuilder.build()));
+                    })
+                    .flatMap(Optional::stream)
+                    .collect(Collectors.toList());
 
-                    var toQuantity = (Function<String, Quantity>) (String x) -> Optional.ofNullable(x).map(Quantity::new).orElse(null);
-                    var containerBuilder = new ContainerBuilder()
-                            .withImage(spec.getImage())
-                            .withCommand(spec.getCmd())
-                            .withName(String.format("sp-container-%s", UUID.randomUUID()))
-                            .withPorts(
-                                    spec.getPortMapping().values().stream()
-                                            .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
-                                            .collect(Collectors.toList())
-                            )
-                            .withVolumeMounts(volumeMounts)
-                            .withSecurityContext(security)
-                            .withResources(
-                                    new ResourceRequirementsBuilder()
-                                            .addToRequests("cpu", toQuantity.apply(spec.getCpuRequest()))
-                                            .addToLimits("cpu", toQuantity.apply((spec.getCpuLimit())))
-                                            .addToRequests("memory", toQuantity.apply((spec.getMemoryRequest())))
-                                            .addToLimits("memory", toQuantity.apply((spec.getMemoryLimit())))
-                                            .build()
-                            )
-                            .withEnv(envVars);
+                var security = new SecurityContextBuilder()
+                    .withPrivileged(isPrivileged() || spec.isPrivileged())
+                    .build();
 
-                    var imagePullPolicy = getProperty(PROPERTY_IMG_PULL_POLICY);
-                    if (imagePullPolicy != null) containerBuilder.withImagePullPolicy(imagePullPolicy);
+                var toQuantity = (Function<String, Quantity>) (String x) -> Optional.ofNullable(x).map(Quantity::new).orElse(null);
+                var containerBuilder = new ContainerBuilder()
+                    .withImage(spec.getImage())
+                    .withCommand(spec.getCmd())
+                    .withName(String.format("sp-container-%s", UUID.randomUUID()))
+                    .withPorts(
+                        spec.getPortMapping().values().stream()
+                            .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
+                            .collect(Collectors.toList())
+                    )
+                    .withVolumeMounts(volumeMounts)
+                    .withSecurityContext(security)
+                    .withResources(
+                        new ResourceRequirementsBuilder()
+                            .addToRequests("cpu", toQuantity.apply(spec.getCpuRequest()))
+                            .addToLimits("cpu", toQuantity.apply((spec.getCpuLimit())))
+                            .addToRequests("memory", toQuantity.apply((spec.getMemoryRequest())))
+                            .addToLimits("memory", toQuantity.apply((spec.getMemoryLimit())))
+                            .build()
+                    )
+                    .withEnv(envVars);
 
-                    return containerBuilder.build();
-                }))
-                .collect(Collectors.toList());
+                var imagePullPolicy = getProperty(PROPERTY_IMG_PULL_POLICY);
+                if (imagePullPolicy != null) containerBuilder.withImagePullPolicy(imagePullPolicy);
+
+                return containerBuilder.build();
+            }))
+            .collect(Collectors.toList());
 
         log.debug("containers created: {}", containers.size());
         log.debug("volumes created: {}", volumes.size());
@@ -268,8 +268,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
         log.debug("nodeSelectorString: {}", nodeSelectorString);
 
         var startupPod = podBuilder
-                .withSpec(podSpec)
-                .build();
+            .withSpec(podSpec)
+            .build();
 
         JsonPatch patch = readPatchFromSpec(proxy);
         Pod patchedPod = podPatcher.patchWithDebug(startupPod, patch);
@@ -280,9 +280,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
         createAdditionalManifests(proxy, effectiveKubeNamespace);
 
         var startedPod = kubeClient
-                .pods()
-                .inNamespace(effectiveKubeNamespace)
-                .create(patchedPod);
+            .pods()
+            .inNamespace(effectiveKubeNamespace)
+            .create(patchedPod);
 
         log.debug("pod started");
 
@@ -358,11 +358,11 @@ public class KubernetesBackend extends AbstractContainerBackend {
     // Calculate proxy routes for all configured ports.
     private void calculateProxyRoutes(List<ContainerSpec> specs, Proxy proxy, Container container, Service service) throws Exception {
         for (var entry : specs.stream()
-                .flatMap(x -> x.getPortMapping().entrySet().stream())
-                .collect(Collectors.toList())) {
+            .flatMap(x -> x.getPortMapping().entrySet().stream())
+            .collect(Collectors.toList())) {
             var servicePort = service == null ? -1 : service.getSpec().getPorts().stream()
-                    .filter(p -> p.getPort().equals(entry.getValue())).map(ServicePort::getNodePort)
-                    .findAny().orElse(-1);
+                .filter(p -> p.getPort().equals(entry.getValue())).map(ServicePort::getNodePort)
+                .findAny().orElse(-1);
 
             var mapping = mappingStrategy.createMapping(entry.getKey(), container, proxy);
             var target = calculateTarget(container, entry.getValue(), servicePort);
@@ -375,27 +375,27 @@ public class KubernetesBackend extends AbstractContainerBackend {
         Service service = null;
         if (!isUseInternalNetwork()) {
             var servicePorts = specs.stream()
-                    .flatMap(x -> x.getPortMapping().values().stream())
-                    .map(p -> new ServicePortBuilder().withPort(p).build())
-                    .collect(Collectors.toList());
+                .flatMap(x -> x.getPortMapping().values().stream())
+                .map(p -> new ServicePortBuilder().withPort(p).build())
+                .collect(Collectors.toList());
 
             var startupService = new ServiceBuilder()
-                    .withApiVersion(apiVersion)
-                    .withKind("Service")
-                    .withNewMetadata()
-                    .withName("sp-service-" + container.getId())
-                    .addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
-                    .addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
-                    .addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
-                    .addToLabels(identifierLabel, identifierValue)
-                    .addToLabels(allLabels)
-                    .endMetadata()
-                    .withNewSpec()
-                    .addToSelector("app", container.getId())
-                    .withType("NodePort")
-                    .withPorts(servicePorts)
-                    .endSpec()
-                    .build();
+                .withApiVersion(apiVersion)
+                .withKind("Service")
+                .withNewMetadata()
+                .withName("sp-service-" + container.getId())
+                .addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
+                .addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
+                .addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
+                .addToLabels(identifierLabel, identifierValue)
+                .addToLabels(allLabels)
+                .endMetadata()
+                .withNewSpec()
+                .addToSelector("app", container.getId())
+                .withType("NodePort")
+                .withPorts(servicePorts)
+                .endSpec()
+                .build();
             kubeClient.services().inNamespace(effectiveKubeNamespace).createOrReplace(startupService);
             // Workaround: waitUntilReady appears to be buggy.
             Retrying.retry(i -> isServiceReady(kubeClient.resource(startupService).fromServer().get()), 60, 1000);
@@ -561,11 +561,11 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
         var identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
         return kubeClient.pods().inAnyNamespace()
-                .withLabel(identifierLabel, identifierValue)
-                .withoutField("status.phase", "Pending")
-                .withoutField("status.phase", "Running")
-                .withoutField("status.phase", "Succeeded")
-                .list();
+            .withLabel(identifierLabel, identifierValue)
+            .withoutField("status.phase", "Pending")
+            .withoutField("status.phase", "Running")
+            .withoutField("status.phase", "Succeeded")
+            .list();
     }
 
     private class ErrorPodsCleaner implements Runnable {

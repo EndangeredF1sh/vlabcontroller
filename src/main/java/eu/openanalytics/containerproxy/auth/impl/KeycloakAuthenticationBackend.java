@@ -87,13 +87,13 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
         http.formLogin().disable();
 
         http
-                .sessionManagement().sessionAuthenticationStrategy(sessionAuthenticationStrategy())
-                .and()
-                .addFilterBefore(keycloakPreAuthActionsFilter(), LogoutFilter.class)
-                .addFilterBefore(keycloakAuthenticationProcessingFilter(), BasicAuthenticationFilter.class)
-                .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint())
-                .and()
-                .logout().addLogoutHandler(keycloakLogoutHandler());
+            .sessionManagement().sessionAuthenticationStrategy(sessionAuthenticationStrategy())
+            .and()
+            .addFilterBefore(keycloakPreAuthActionsFilter(), LogoutFilter.class)
+            .addFilterBefore(keycloakAuthenticationProcessingFilter(), BasicAuthenticationFilter.class)
+            .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint())
+            .and()
+            .logout().addLogoutHandler(keycloakLogoutHandler());
     }
 
     @Override
@@ -114,10 +114,10 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
         // Because the HTTP requests are adapted before they are processed, the requested failed to complete successfully and caused an io.undertow.server.TruncatedResponseException
         // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourself
         RequestMatcher requestMatcher =
-                new OrRequestMatcher(
-                        new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
-                        new RequestHeaderRequestMatcher(KeycloakAuthenticationProcessingFilter.AUTHORIZATION_HEADER)
-                );
+            new OrRequestMatcher(
+                new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
+                new RequestHeaderRequestMatcher(KeycloakAuthenticationProcessingFilter.AUTHORIZATION_HEADER)
+            );
 
         KeycloakAuthenticationProcessingFilter filter = new KeycloakAuthenticationProcessingFilter(authenticationManager, requestMatcher);
         filter.setSessionAuthenticationStrategy(sessionAuthenticationStrategy());
@@ -192,10 +192,10 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
             public Authentication authenticate(Authentication authentication) throws AuthenticationException {
                 KeycloakAuthenticationToken token = (KeycloakAuthenticationToken) super.authenticate(authentication);
                 List<GrantedAuthority> auth = token.getAuthorities().stream()
-                        .map(t -> t.getAuthority().toUpperCase())
-                        .map(a -> a.startsWith("ROLE_") ? a : "ROLE_" + a)
-                        .map(a -> new KeycloakRole(a))
-                        .collect(Collectors.toList());
+                    .map(t -> t.getAuthority().toUpperCase())
+                    .map(a -> a.startsWith("ROLE_") ? a : "ROLE_" + a)
+                    .map(a -> new KeycloakRole(a))
+                    .collect(Collectors.toList());
                 String nameAttribute = environment.getProperty("proxy.keycloak.name-attribute", IDToken.NAME).toLowerCase();
                 return new KeycloakAuthenticationToken2(token.getAccount(), token.isInteractive(), nameAttribute, auth);
             }

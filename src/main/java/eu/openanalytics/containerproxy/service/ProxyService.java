@@ -119,9 +119,9 @@ public class ProxyService {
      */
     public List<ProxySpec> getProxySpecs(Predicate<ProxySpec> filter, boolean ignoreAccessControl) {
         return baseSpecProvider.getSpecs().stream()
-                .filter(spec -> ignoreAccessControl || userService.canAccess(spec))
-                .filter(spec -> filter == null || filter.test(spec))
-                .collect(Collectors.toList());
+            .filter(spec -> ignoreAccessControl || userService.canAccess(spec))
+            .filter(spec -> filter == null || filter.test(spec))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -247,8 +247,8 @@ public class ProxyService {
                 log.info(String.format("Proxy released [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId()));
                 if (proxy.getStartupTimestamp() > 0) {
                     applicationEventPublisher.publishEvent(new ProxyStopEvent(this, proxy.getUserId(),
-                            proxy.getSpec().getId(),
-                            Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp())));
+                        proxy.getSpec().getId(),
+                        Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp())));
                 }
             } catch (Exception e) {
                 log.error("Failed to release proxy " + proxy.getId(), e);
@@ -285,8 +285,8 @@ public class ProxyService {
                 log.info(String.format("Proxy released [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId()));
                 if (proxy.getStartupTimestamp() > 0) {
                     applicationEventPublisher.publishEvent(new ProxyStopEvent(this, proxy.getUserId(),
-                            proxy.getSpec().getId(),
-                            Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp() - silenceOffset)));
+                        proxy.getSpec().getId(),
+                        Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp() - silenceOffset)));
                 }
             } catch (Exception e) {
                 log.error("Failed to release proxy " + proxy.getId(), e);

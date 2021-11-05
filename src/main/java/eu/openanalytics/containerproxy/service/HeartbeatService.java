@@ -263,11 +263,11 @@ public class HeartbeatService {
                                 if ((proxySilence > heartbeatTimeout) && (isPureHttp | isIdled)) {
                                     long silence = isPureHttp ? proxySilence : cleanupInterval * (heartbeatStatus.getTerminateCounter() - 1);
                                     log.info("Releasing {} proxy [user: {}] [spec: {}] [id: {}] [silence: {}ms]",
-                                            isPureHttp ? "inactive" : "idled",
-                                            proxy.getUserId(),
-                                            proxy.getSpec().getId(),
-                                            proxy.getId(),
-                                            silence);
+                                        isPureHttp ? "inactive" : "idled",
+                                        proxy.getUserId(),
+                                        proxy.getSpec().getId(),
+                                        proxy.getId(),
+                                        silence);
 
                                     proxyHeartbeats.remove(proxy.getId());
                                     websocketHeartbeats.remove(proxy.getId());

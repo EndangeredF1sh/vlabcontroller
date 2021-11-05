@@ -39,8 +39,8 @@ public class APISecurityConfig extends ResourceServerConfigurerAdapter {
     @Override
     public void configure(ResourceServerSecurityConfigurer resources) throws Exception {
         resources
-                .tokenExtractor(new CookieTokenExtractor())
-                .resourceId(environment.getProperty("proxy.oauth2.resource-id"));
+            .tokenExtractor(new CookieTokenExtractor())
+            .resourceId(environment.getProperty("proxy.oauth2.resource-id"));
     }
 
     @Bean
@@ -87,8 +87,8 @@ public class APISecurityConfig extends ResourceServerConfigurerAdapter {
             String token = super.extractToken(request);
             if (token == null && request.getCookies() != null) {
                 token = Arrays.stream(request.getCookies())
-                        .filter(c -> c.getName().equals("access_token")).findAny()
-                        .map(c -> c.getValue()).orElse(null);
+                    .filter(c -> c.getName().equals("access_token")).findAny()
+                    .map(c -> c.getValue()).orElse(null);
             }
             return token;
         }

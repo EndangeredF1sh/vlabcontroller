@@ -18,7 +18,7 @@ public class TemplateResolverConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/assets/**")
-                .addResourceLocations("file:" + environment.getProperty("proxy.template-path") + "/assets/");
+            .addResourceLocations("file:" + environment.getProperty("proxy.template-path") + "/assets/");
     }
 
     @Bean

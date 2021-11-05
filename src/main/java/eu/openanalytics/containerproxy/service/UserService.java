@@ -153,9 +153,9 @@ public class UserService {
         String userId = getUserId(source);
 
         applicationEventPublisher.publishEvent(new AuthFailedEvent(
-                this,
-                userId,
-                RequestContextHolder.currentRequestAttributes().getSessionId()));
+            this,
+            userId,
+            RequestContextHolder.currentRequestAttributes().getSessionId()));
     }
 
     public void logout(Authentication auth) {
@@ -169,10 +169,10 @@ public class UserService {
         String sessionId = session.getId();
         userInitiatedLogoutMap.put(sessionId, "true");
         applicationEventPublisher.publishEvent(new UserLogoutEvent(
-                this,
-                userId,
-                sessionId,
-                false));
+            this,
+            userId,
+            sessionId,
+            false));
     }
 
     @EventListener
@@ -192,9 +192,9 @@ public class UserService {
 
         String userId = getUserId(auth);
         applicationEventPublisher.publishEvent(new UserLoginEvent(
-                this,
-                userId,
-                RequestContextHolder.currentRequestAttributes().getSessionId()));
+            this,
+            userId,
+            RequestContextHolder.currentRequestAttributes().getSessionId()));
     }
 
     @EventListener
@@ -222,18 +222,18 @@ public class UserService {
                 logoutStrategy.onLogout(userId, true);
                 log.info(String.format("HTTP session expired [user: %s]", userId));
                 applicationEventPublisher.publishEvent(new UserLogoutEvent(
-                        this,
-                        userId,
-                        event.getSession().getId(),
-                        true
+                    this,
+                    userId,
+                    event.getSession().getId(),
+                    true
                 ));
             } else if (authBackend.getName().equals("none")) {
                 log.info(String.format("Anonymous user logged out [user: %s]", event.getSession().getId()));
                 applicationEventPublisher.publishEvent(new UserLogoutEvent(
-                        this,
-                        event.getSession().getId(),
-                        event.getSession().getId(),
-                        true
+                    this,
+                    event.getSession().getId(),
+                    event.getSession().getId(),
+                    true
                 ));
             }
         }
@@ -244,9 +244,9 @@ public class UserService {
         if (authBackend.getName().equals("none")) {
             log.info(String.format("Anonymous user logged in [user: %s]", event.getSession().getId()));
             applicationEventPublisher.publishEvent(new UserLoginEvent(
-                    this,
-                    event.getSession().getId(),
-                    event.getSession().getId()));
+                this,
+                event.getSession().getId(),
+                event.getSession().getId()));
         }
     }
 

@@ -69,12 +69,12 @@ public class SessionHelper {
 
         // Ideally, use the HTTP session information.
         info.principal = Optional.ofNullable(ServletRequestContext.current())
-                .map(ctx -> ctx.getSession())
-                .map(session -> (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT"))
-                .map(ctx -> ctx.getAuthentication())
-                .filter(auth -> !(auth instanceof AnonymousAuthenticationToken))
-                .map(auth -> auth.getPrincipal())
-                .orElse(null);
+            .map(ctx -> ctx.getSession())
+            .map(session -> (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT"))
+            .map(ctx -> ctx.getAuthentication())
+            .filter(auth -> !(auth instanceof AnonymousAuthenticationToken))
+            .map(auth -> auth.getPrincipal())
+            .orElse(null);
 
         // Fallback: use the Authorization header, if present.
         HeaderValues authHeader = exchange.getRequestHeaders().get("Authorization");

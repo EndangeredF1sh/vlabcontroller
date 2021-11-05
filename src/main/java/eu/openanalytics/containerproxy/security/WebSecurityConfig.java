@@ -87,8 +87,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
             default:
                 if (frameOptions.toUpperCase().startsWith("ALLOW-FROM")) {
                     http.headers()
-                            .frameOptions().disable()
-                            .addHeaderWriter(new StaticHeadersWriter("X-Frame-Options", frameOptions));
+                        .frameOptions().disable()
+                        .addHeaderWriter(new StaticHeadersWriter("X-Frame-Options", frameOptions));
                 }
         }
 
@@ -106,18 +106,18 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         if (auth.hasAuthorization()) {
             http.authorizeRequests().antMatchers(
-                    "/login", "/signin/**", "/auth-error", "/app-access-denied", "/logout-success",
-                    "/favicon.ico", "/css/**", "/img/**", "/js/**", "/assets/**", "/webjars/**").permitAll();
+                "/login", "/signin/**", "/auth-error", "/app-access-denied", "/logout-success",
+                "/favicon.ico", "/css/**", "/img/**", "/js/**", "/assets/**", "/webjars/**").permitAll();
             http
-                    .formLogin()
-                    .loginPage("/login")
-                    .and()
-                    .logout()
-                    .logoutUrl(auth.getLogoutURL())
-                    // important: set the next option after logoutUrl because it would otherwise get overwritten
-                    .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                    .addLogoutHandler(logoutHandler)
-                    .logoutSuccessUrl(auth.getLogoutSuccessURL());
+                .formLogin()
+                .loginPage("/login")
+                .and()
+                .logout()
+                .logoutUrl(auth.getLogoutURL())
+                // important: set the next option after logoutUrl because it would otherwise get overwritten
+                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .addLogoutHandler(logoutHandler)
+                .logoutSuccessUrl(auth.getLogoutSuccessURL());
 
             // Enable basic auth for RESTful calls when APISecurityConfig is not enabled.
             http.addFilter(new BasicAuthenticationFilter(super.authenticationManagerBean()));

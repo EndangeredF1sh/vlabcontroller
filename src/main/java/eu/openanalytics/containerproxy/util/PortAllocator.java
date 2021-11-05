@@ -23,7 +23,7 @@ public class PortAllocator {
 
         if (range[1] > 0 && nextPort > range[1]) {
             throw new ContainerProxyException("Cannot create container: all allocated ports are currently in use."
-                    + " Please try again later or contact an administrator.");
+                + " Please try again later or contact an administrator.");
         }
 
         occupiedPorts.add(nextPort);
@@ -39,9 +39,9 @@ public class PortAllocator {
     public void release(String ownerId) {
         synchronized (occupiedPortOwners) {
             Set<Integer> portsToRelease = occupiedPortOwners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(ownerId))
-                    .map(e -> e.getKey())
-                    .collect(Collectors.toSet());
+                .filter(e -> e.getValue().equals(ownerId))
+                .map(e -> e.getKey())
+                .collect(Collectors.toSet());
             for (Integer port : portsToRelease) {
                 occupiedPorts.remove(port);
                 occupiedPortOwners.remove(port);

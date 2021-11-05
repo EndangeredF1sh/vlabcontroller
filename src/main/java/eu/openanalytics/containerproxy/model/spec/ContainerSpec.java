@@ -126,7 +126,7 @@ public class ContainerSpec {
             if (target.getPorts() == null) target.setPorts(new ArrayList<>());
             target.getPorts().addAll(this.getPorts());
             target.getPortMapping().putAll(
-                    ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x))
+                ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x))
             );
         }
 

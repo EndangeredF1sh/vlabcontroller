@@ -117,7 +117,7 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
 
     protected List<String> resolve(List<String> expression) {
         return expression.stream()
-                .map(x -> resolver.evaluateToString(x, context))
-                .collect(Collectors.toList());
+            .map(x -> resolver.evaluateToString(x, context))
+            .collect(Collectors.toList());
     }
 }

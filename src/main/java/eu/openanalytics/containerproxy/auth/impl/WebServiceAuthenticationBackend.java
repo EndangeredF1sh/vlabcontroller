@@ -56,7 +56,7 @@ public class WebServiceAuthenticationBackend implements IAuthenticationBackend {
 
             @Override
             public Collection<? extends GrantedAuthority> attemptAuthentication(String username, String password)
-                    throws RemoteAuthenticationException {
+                throws RemoteAuthenticationException {
                 RestTemplate restTemplate = new RestTemplate();
 
                 HttpHeaders headers = new HttpHeaders();
