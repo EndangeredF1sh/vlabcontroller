@@ -1,5 +1,9 @@
 package eu.openanalytics.containerproxy.backend.kubernetes;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.datatype.jsr353.JSR353Module;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import eu.openanalytics.containerproxy.ContainerProxyException;
@@ -16,6 +20,7 @@ import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.internal.readiness.Readiness;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import javax.json.JsonPatch;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,6 +64,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
   
   private final Logger log = LogManager.getLogger(KubernetesBackend.class);
   
+  @Inject
+  private PodPatcher podPatcher;
   
   @Inject
   private ProxyService proxyService;
@@ -263,10 +270,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
     var startupPod = podBuilder
       .withSpec(podSpec)
       .build();
-    
-    var effectiveKubeNamespace = startupPod.getMetadata().getNamespace();
-    log.debug("effective kubernetes namespace: {}", effectiveKubeNamespace);
+  
+    JsonPatch patch = readPatchFromSpec(proxy);
+    Pod patchedPod = podPatcher.patchWithDebug(startupPod, patch);
+    final String effectiveKubeNamespace = patchedPod.getMetadata().getNamespace(); // use the namespace of the patched Pod, in case the patch changes the namespace.
     container.getParameters().put(PARAM_NAMESPACE, effectiveKubeNamespace);
+  
+    // create additional manifests -> use the effective (i.e. patched) namespace if no namespace is provided
+    createAdditionalManifests(proxy, effectiveKubeNamespace);
     
     var startedPod = kubeClient
       .pods()
@@ -289,6 +300,40 @@ public class KubernetesBackend extends AbstractContainerBackend {
     
     return container;
   }
+  
+  private void createAdditionalManifests(Proxy proxy, String namespace) {
+    for (HasMetadata fullObject : getAdditionManifestsAsObjects(proxy, namespace)) {
+      if (kubeClient.resource(fullObject).fromServer().get() == null) {
+        String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+        String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
+        ObjectMeta cache = fullObject.getMetadata();
+        Map<String, String> labels = cache.getLabels();
+        if (labels == null) {
+          labels = new HashMap<>();
+        }
+        labels.put(identifierLabel, identifierValue);
+        cache.setLabels(labels);
+        fullObject.setMetadata(cache);
+        kubeClient.resource(fullObject).createOrReplace();
+      }
+    }
+  }
+  
+  private JsonPatch readPatchFromSpec(Proxy proxy) throws JsonProcessingException {
+    String patchAsString = proxy.getSpec().getKubernetesPodPatches();
+    if (patchAsString == null) {
+      return null;
+    }
+    
+    // resolve expressions
+    SpecExpressionContext context = SpecExpressionContext.create(proxy, proxy.getSpec());
+    String expressionAwarePatch = expressionResolver.evaluateToString(patchAsString, context);
+    
+    ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
+    yamlReader.registerModule(new JSR353Module());
+    return yamlReader.readValue(expressionAwarePatch, JsonPatch.class);
+  }
+  
   
   private Pod waitUntilPodReadyOrDie(Proxy proxy, Container container, Pod startedPod) {
     var totalWaitMs = Integer.parseInt(environment.getProperty("proxy.kubernetes.pod-wait-time", "60000"));
