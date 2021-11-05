@@ -15,27 +15,27 @@ import javax.servlet.http.HttpServletRequest;
  * to proxy the request to the container.
  */
 public class FixedDefaultOAuth2AuthorizationRequestResolver implements OAuth2AuthorizationRequestResolver {
-  
-  private final DefaultOAuth2AuthorizationRequestResolver delegate;
-  
-  public FixedDefaultOAuth2AuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository, String authorizationRequestBaseUri) {
-    delegate = new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, authorizationRequestBaseUri);
-  }
-  
-  @Override
-  public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
-    if (request.getServletPath().startsWith("/app_direct")) {
-      return null;
+
+    private final DefaultOAuth2AuthorizationRequestResolver delegate;
+
+    public FixedDefaultOAuth2AuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository, String authorizationRequestBaseUri) {
+        delegate = new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, authorizationRequestBaseUri);
     }
-    return delegate.resolve(request);
-  }
-  
-  @Override
-  public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
-    if (request.getServletPath().startsWith("/app_direct")) {
-      return null;
+
+    @Override
+    public OAuth2AuthorizationRequest resolve(HttpServletRequest request) {
+        if (request.getServletPath().startsWith("/app_direct")) {
+            return null;
+        }
+        return delegate.resolve(request);
     }
-    return delegate.resolve(request, clientRegistrationId);
-  }
-  
+
+    @Override
+    public OAuth2AuthorizationRequest resolve(HttpServletRequest request, String clientRegistrationId) {
+        if (request.getServletPath().startsWith("/app_direct")) {
+            return null;
+        }
+        return delegate.resolve(request, clientRegistrationId);
+    }
+
 }

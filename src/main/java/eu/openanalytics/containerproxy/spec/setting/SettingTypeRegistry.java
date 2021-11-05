@@ -22,30 +22,30 @@ import java.util.Map;
  */
 @Component
 public class SettingTypeRegistry {
-  
-  @Autowired(required = false)
-  private Map<String, IRuntimeSettingType> typeMap = new HashMap<>();
-  
-  public RuntimeSettingSpec resolveSpec(RuntimeSetting setting, ProxySpec proxySpec) {
-    return proxySpec.getRuntimeSettingSpecs().stream().filter(s -> s.getName().equals(setting.getName())).findAny().orElse(null);
-  }
-  
-  public IRuntimeSettingType resolveSpecType(RuntimeSettingSpec settingSpec) {
-    String type = settingSpec.getType();
-    if (type == null || type.isEmpty()) {
-      //TODO try to determine the type via the spec config
-      type = "setting.type.string";
+
+    @Autowired(required = false)
+    private Map<String, IRuntimeSettingType> typeMap = new HashMap<>();
+
+    public RuntimeSettingSpec resolveSpec(RuntimeSetting setting, ProxySpec proxySpec) {
+        return proxySpec.getRuntimeSettingSpecs().stream().filter(s -> s.getName().equals(setting.getName())).findAny().orElse(null);
     }
-    return typeMap.get(type);
-  }
-  
-  public void applySetting(RuntimeSetting setting, ProxySpec targetSpec) throws ProxySpecException {
-    RuntimeSettingSpec settingSpec = resolveSpec(setting, targetSpec);
-    if (settingSpec == null) return;
-    
-    IRuntimeSettingType type = resolveSpecType(settingSpec);
-    if (type == null) throw new ProxySpecException("Unknown setting type: " + settingSpec.getType());
-    
-    type.apply(setting, settingSpec, targetSpec);
-  }
+
+    public IRuntimeSettingType resolveSpecType(RuntimeSettingSpec settingSpec) {
+        String type = settingSpec.getType();
+        if (type == null || type.isEmpty()) {
+            //TODO try to determine the type via the spec config
+            type = "setting.type.string";
+        }
+        return typeMap.get(type);
+    }
+
+    public void applySetting(RuntimeSetting setting, ProxySpec targetSpec) throws ProxySpecException {
+        RuntimeSettingSpec settingSpec = resolveSpec(setting, targetSpec);
+        if (settingSpec == null) return;
+
+        IRuntimeSettingType type = resolveSpecType(settingSpec);
+        if (type == null) throw new ProxySpecException("Unknown setting type: " + settingSpec.getType());
+
+        type.apply(setting, settingSpec, targetSpec);
+    }
 }

@@ -17,45 +17,45 @@ import java.util.Optional;
 
 @Controller
 public class AuthController extends BaseController {
-  
-  private final Environment environment;
-  
-  private final IAuthenticationBackend auth;
-  
-  public AuthController(Environment environment, IAuthenticationBackend auth) {
-    this.environment = environment;
-    this.auth = auth;
-  }
-  
-  @GetMapping(value = "/login")
-  public Object getLoginPage(@RequestParam Optional<String> error, ModelMap map) {
-    prepareMap(map);
-    if (error.isPresent()) map.put("error", "Invalid user name or password");
-    
-    if (auth instanceof OpenIDAuthenticationBackend) {
-      return new RedirectView(((OpenIDAuthenticationBackend) auth).getLoginRedirectURI());
-    } else {
-      return "login";
+
+    private final Environment environment;
+
+    private final IAuthenticationBackend auth;
+
+    public AuthController(Environment environment, IAuthenticationBackend auth) {
+        this.environment = environment;
+        this.auth = auth;
     }
-  }
-  
-  @GetMapping(value = "/auth-error")
-  public String getAuthErrorPage(ModelMap map) {
-    prepareMap(map);
-    map.put("application_name", environment.getProperty("spring.application.name"));
-    return "auth-error";
-  }
-  
-  @GetMapping(value = "/app-access-denied")
-  public String getAppAccessDeniedPage(ModelMap map) {
-    prepareMap(map);
-    return "app-access-denied";
-  }
-  
-  @GetMapping(value = "/logout-success")
-  public String getLogoutSuccessPage(ModelMap map) {
-    prepareMap(map);
-    return "logout-success";
-  }
-  
+
+    @GetMapping(value = "/login")
+    public Object getLoginPage(@RequestParam Optional<String> error, ModelMap map) {
+        prepareMap(map);
+        if (error.isPresent()) map.put("error", "Invalid user name or password");
+
+        if (auth instanceof OpenIDAuthenticationBackend) {
+            return new RedirectView(((OpenIDAuthenticationBackend) auth).getLoginRedirectURI());
+        } else {
+            return "login";
+        }
+    }
+
+    @GetMapping(value = "/auth-error")
+    public String getAuthErrorPage(ModelMap map) {
+        prepareMap(map);
+        map.put("application_name", environment.getProperty("spring.application.name"));
+        return "auth-error";
+    }
+
+    @GetMapping(value = "/app-access-denied")
+    public String getAppAccessDeniedPage(ModelMap map) {
+        prepareMap(map);
+        return "app-access-denied";
+    }
+
+    @GetMapping(value = "/logout-success")
+    public String getLogoutSuccessPage(ModelMap map) {
+        prepareMap(map);
+        return "logout-success";
+    }
+
 }

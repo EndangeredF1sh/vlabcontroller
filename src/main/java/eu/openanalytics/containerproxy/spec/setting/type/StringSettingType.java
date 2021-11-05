@@ -6,10 +6,10 @@ import org.springframework.stereotype.Component;
 
 @Component("setting.type.string")
 public class StringSettingType extends AbstractSettingType {
-  
-  @Override
-  protected Object getValue(RuntimeSetting setting, RuntimeSettingSpec settingSpec) {
-    return String.valueOf(setting.getValue());
-  }
-  
+
+    @Override
+    protected Object getValue(RuntimeSetting setting, RuntimeSettingSpec settingSpec) {
+        return String.valueOf(setting.getValue());
+    }
+
 }

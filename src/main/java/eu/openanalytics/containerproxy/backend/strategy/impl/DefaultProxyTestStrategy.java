@@ -6,10 +6,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DefaultProxyTestStrategy implements IProxyTestStrategy {
-  
-  @Override
-  public boolean testProxy(Proxy proxy) {
-    return true;
-  }
-  
+
+    @Override
+    public boolean testProxy(Proxy proxy) {
+        return true;
+    }
+
 }

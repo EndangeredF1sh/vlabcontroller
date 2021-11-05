@@ -11,15 +11,15 @@ import javax.servlet.http.HttpServletResponse;
 
 @Component
 public class UserLogoutHandler implements LogoutHandler {
-  private final UserService userService;
-  
-  public UserLogoutHandler(UserService userService) {
-    this.userService = userService;
-  }
-  
-  @Override
-  public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-    userService.logout(authentication);
-  }
-  
+    private final UserService userService;
+
+    public UserLogoutHandler(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Override
+    public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+        userService.logout(authentication);
+    }
+
 }

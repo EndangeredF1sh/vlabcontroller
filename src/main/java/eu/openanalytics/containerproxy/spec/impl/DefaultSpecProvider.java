@@ -20,29 +20,32 @@ import java.util.stream.Collectors;
 @Primary
 @ConfigurationProperties(prefix = "proxy")
 public class DefaultSpecProvider implements IProxySpecProvider {
-  @Getter @Setter private List<ProxySpec> specs = new ArrayList<>();
-  
-  public ProxySpec getSpec(String id) {
-    if (id == null || id.isEmpty()) return null;
-    return specs.stream().filter(s -> id.equals(s.getId())).findAny().orElse(null);
-  }
-  
-  @PostConstruct
-  public void afterPropertiesSet() {
-    this.specs.stream().collect(Collectors.groupingBy(ProxySpec::getId)).forEach((id, duplicateSpecs) -> {
-      if (duplicateSpecs.size() > 1) throw new IllegalArgumentException(String.format("Configuration error: spec with id '%s' is defined multiple times", id));
-    });
-  }
-  
-  private static Environment environment;
-  
-  @Autowired
-  public void setEnvironment(Environment env){
-    DefaultSpecProvider.environment = env;
-  }
-  
-  public static String getPublicPath(String appName) {
-    String contextPath = SessionHelper.getContextPath(environment, true);
-    return contextPath + "app_direct/" + appName + "/";
-  }
+    @Getter
+    @Setter
+    private List<ProxySpec> specs = new ArrayList<>();
+
+    public ProxySpec getSpec(String id) {
+        if (id == null || id.isEmpty()) return null;
+        return specs.stream().filter(s -> id.equals(s.getId())).findAny().orElse(null);
+    }
+
+    @PostConstruct
+    public void afterPropertiesSet() {
+        this.specs.stream().collect(Collectors.groupingBy(ProxySpec::getId)).forEach((id, duplicateSpecs) -> {
+            if (duplicateSpecs.size() > 1)
+                throw new IllegalArgumentException(String.format("Configuration error: spec with id '%s' is defined multiple times", id));
+        });
+    }
+
+    private static Environment environment;
+
+    @Autowired
+    public void setEnvironment(Environment env) {
+        DefaultSpecProvider.environment = env;
+    }
+
+    public static String getPublicPath(String appName) {
+        String contextPath = SessionHelper.getContextPath(environment, true);
+        return contextPath + "app_direct/" + appName + "/";
+    }
 }

@@ -17,13 +17,22 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "proxy.engagement")
 public class EngagementProperties {
-  @Getter @Setter private boolean enabled = true;
-  @Getter @Setter private List<String> filterPath = new ArrayList<>();
-  @Getter @Setter private int idleRetry = 3;
-  @Getter @Setter private int threshold = 230;
-  @Getter private Duration maxAge = Duration.ofHours(4);
-  
-  public void setMaxAge(String duration) {
-    this.maxAge = Duration.parse(duration);
-  }
+    @Getter
+    @Setter
+    private boolean enabled = true;
+    @Getter
+    @Setter
+    private List<String> filterPath = new ArrayList<>();
+    @Getter
+    @Setter
+    private int idleRetry = 3;
+    @Getter
+    @Setter
+    private int threshold = 230;
+    @Getter
+    private Duration maxAge = Duration.ofHours(4);
+
+    public void setMaxAge(String duration) {
+        this.maxAge = Duration.parse(duration);
+    }
 }

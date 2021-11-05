@@ -14,29 +14,29 @@ import javax.inject.Inject;
 @Configuration
 @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
 public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig {
-  private final Logger log = LogManager.getLogger(getClass());
-  
-  final Environment environment;
-  
-  public KeycloakRoleSecurityConfig(Environment environment) {
-    this.environment = environment;
-  }
-  
-  @Override
-  public void apply(WebSecurity web) throws Exception {
-    ICustomSecurityConfig.super.apply(web);
-  }
-  
-  @Override
-  public void apply(HttpSecurity http) throws Exception {
-    ICustomSecurityConfig.super.apply(http);
-    String[] uriArray = new String[]{"/api/**", "/app/**", "/app_direct/**", "/filebrowser", "/controlpanel", environment.getProperty("proxy.landing-page")};
-    String role = environment.getProperty("proxy.allowed-role");
-    if (!Strings.isNullOrEmpty(role)) {
-      log.info("Enable allowed roles mode");
-      http.authorizeRequests().antMatchers("/").anonymous();
-      http.authorizeRequests().antMatchers(uriArray).hasAnyRole(role.toUpperCase());
+    private final Logger log = LogManager.getLogger(getClass());
+
+    final Environment environment;
+
+    public KeycloakRoleSecurityConfig(Environment environment) {
+        this.environment = environment;
     }
-  }
-  
+
+    @Override
+    public void apply(WebSecurity web) throws Exception {
+        ICustomSecurityConfig.super.apply(web);
+    }
+
+    @Override
+    public void apply(HttpSecurity http) throws Exception {
+        ICustomSecurityConfig.super.apply(http);
+        String[] uriArray = new String[]{"/api/**", "/app/**", "/app_direct/**", "/filebrowser", "/controlpanel", environment.getProperty("proxy.landing-page")};
+        String role = environment.getProperty("proxy.allowed-role");
+        if (!Strings.isNullOrEmpty(role)) {
+            log.info("Enable allowed roles mode");
+            http.authorizeRequests().antMatchers("/").anonymous();
+            http.authorizeRequests().antMatchers(uriArray).hasAnyRole(role.toUpperCase());
+        }
+    }
+
 }
