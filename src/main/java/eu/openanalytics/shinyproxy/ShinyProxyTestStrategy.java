@@ -32,7 +32,6 @@ import org.springframework.stereotype.Component;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.function.IntPredicate;
 
 /**

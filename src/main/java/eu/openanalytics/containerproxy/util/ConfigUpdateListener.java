@@ -3,7 +3,6 @@ package eu.openanalytics.containerproxy.util;
 import eu.openanalytics.containerproxy.event.ConfigUpdateEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
 import org.springframework.cloud.context.refresh.ContextRefresher;
 import org.springframework.context.annotation.Configuration;

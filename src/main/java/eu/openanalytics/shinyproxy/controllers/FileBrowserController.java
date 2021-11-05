@@ -62,6 +62,18 @@ public class FileBrowserController extends BaseController {
         this.fileBrowserProperties = fileBrowserProperties;
     }
 
+    static boolean awaitReadyHelper(Proxy proxy, String property) {
+        if (proxy == null) return false;
+        if (proxy.getStatus() == ProxyStatus.Up) return true;
+        if (proxy.getStatus() == ProxyStatus.Stopping || proxy.getStatus() == ProxyStatus.Stopped) return false;
+
+        int totalWaitMs = Integer.parseInt(property);
+        int waitMs = Math.min(500, totalWaitMs);
+        int maxTries = totalWaitMs / waitMs;
+        Retrying.retry(i -> proxy.getStatus() != ProxyStatus.Starting, maxTries, waitMs);
+
+        return (proxy.getStatus() == ProxyStatus.Up);
+    }
 
     @RequestMapping(value = "/filebrowser/**")
     public String fileBrowser(ModelMap map, HttpServletRequest request) {
@@ -143,19 +155,6 @@ public class FileBrowserController extends BaseController {
 
     private boolean awaitReady(Proxy proxy) {
         return awaitReadyHelper(proxy, environment.getProperty("proxy.container-wait-time", "20000"));
-    }
-
-    static boolean awaitReadyHelper(Proxy proxy, String property) {
-        if (proxy == null) return false;
-        if (proxy.getStatus() == ProxyStatus.Up) return true;
-        if (proxy.getStatus() == ProxyStatus.Stopping || proxy.getStatus() == ProxyStatus.Stopped) return false;
-
-        int totalWaitMs = Integer.parseInt(property);
-        int waitMs = Math.min(500, totalWaitMs);
-        int maxTries = totalWaitMs / waitMs;
-        Retrying.retry(i -> proxy.getStatus() != ProxyStatus.Starting, maxTries, waitMs);
-
-        return (proxy.getStatus() == ProxyStatus.Up);
     }
 
     private String buildContainerPath(HttpServletRequest request) {

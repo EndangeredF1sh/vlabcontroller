@@ -1,6 +1,5 @@
 package eu.openanalytics.containerproxy.util;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;

@@ -16,7 +16,6 @@ import org.springframework.security.oauth2.provider.token.*;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.jwk.JwkTokenStore;
 
-import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Map;

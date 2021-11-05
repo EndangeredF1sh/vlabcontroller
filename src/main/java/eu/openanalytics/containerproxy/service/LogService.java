@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ExecutorService;
@@ -21,9 +20,9 @@ import java.util.function.BiConsumer;
 public class LogService {
 
     private static final String PARAM_STREAMS = "streams";
-    private final Logger log = LogManager.getLogger(LogService.class);
     final Environment environment;
     final ILogStorage logStorage;
+    private final Logger log = LogManager.getLogger(LogService.class);
     private ExecutorService executor;
     private boolean loggingEnabled;
 

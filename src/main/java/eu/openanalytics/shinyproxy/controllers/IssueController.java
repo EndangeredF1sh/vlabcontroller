@@ -46,16 +46,15 @@ public class IssueController extends BaseController {
 
     JavaMailSender mailSender;
 
-    @Autowired(required = false)
-    public void setMailSender(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
-
     protected IssueController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend, LogService logService) {
         super(proxyService, userService, environment, authenticationBackend);
         this.logService = logService;
     }
 
+    @Autowired(required = false)
+    public void setMailSender(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
 
     @RequestMapping(value = "/issue", method = RequestMethod.POST)
     public String postIssue(HttpServletRequest request, HttpServletResponse response) {

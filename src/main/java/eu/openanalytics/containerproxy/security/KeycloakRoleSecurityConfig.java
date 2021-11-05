@@ -9,14 +9,11 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 
-import javax.inject.Inject;
-
 @Configuration
 @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
 public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig {
-    private final Logger log = LogManager.getLogger(getClass());
-
     final Environment environment;
+    private final Logger log = LogManager.getLogger(getClass());
 
     public KeycloakRoleSecurityConfig(Environment environment) {
         this.environment = environment;

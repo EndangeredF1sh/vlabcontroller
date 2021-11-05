@@ -131,27 +131,27 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
 
     protected void doStartProxy(Proxy proxy) throws Exception {
         var eSpecs = proxy.getSpec().getContainerSpecs().stream()
-        .map(spec -> {
-            if (authBackend != null) authBackend.customizeContainer(spec);
+                .map(spec -> {
+                    if (authBackend != null) authBackend.customizeContainer(spec);
 
-            // add labels need for App Recovery and maintenance
-            spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
-            spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
+                    // add labels need for App Recovery and maintenance
+                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
+                    spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
 
-            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, unsafeLabel, proxy.getId());
-            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, unsafeLabel, proxy.getSpec().getId());
-            if (realmId != null) {
-                spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
-            }
-            spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
-            spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
-            String[] groups = userService.getGroups(userService.getCurrentAuth());
-            spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
+                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, unsafeLabel, proxy.getId());
+                    spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, unsafeLabel, proxy.getSpec().getId());
+                    if (realmId != null) {
+                        spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
+                    }
+                    spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
+                    spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
+                    String[] groups = userService.getGroups(userService.getCurrentAuth());
+                    spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
 
-            return new ExpressionAwareContainerSpec(spec, proxy, expressionResolver);
-        })
-        .map(ContainerSpec.class::cast)
-        .collect(Collectors.toList());
+                    return new ExpressionAwareContainerSpec(spec, proxy, expressionResolver);
+                })
+                .map(ContainerSpec.class::cast)
+                .collect(Collectors.toList());
 
         Container c = startContainer(eSpecs, proxy);
         c.setSpecs(eSpecs);

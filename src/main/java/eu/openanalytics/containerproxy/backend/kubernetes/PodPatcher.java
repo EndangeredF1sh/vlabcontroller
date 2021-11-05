@@ -11,7 +11,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import javax.json.JsonPatch;
 import javax.json.JsonStructure;
 

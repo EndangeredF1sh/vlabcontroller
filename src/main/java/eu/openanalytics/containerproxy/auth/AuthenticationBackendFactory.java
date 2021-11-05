@@ -7,8 +7,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
-import javax.inject.Inject;
-
 /**
  * Instantiates an appropriate authentication backend depending on the application configuration.
  */

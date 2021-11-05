@@ -20,9 +20,15 @@ import java.util.stream.Collectors;
 @Primary
 @ConfigurationProperties(prefix = "proxy")
 public class DefaultSpecProvider implements IProxySpecProvider {
+    private static Environment environment;
     @Getter
     @Setter
     private List<ProxySpec> specs = new ArrayList<>();
+
+    public static String getPublicPath(String appName) {
+        String contextPath = SessionHelper.getContextPath(environment, true);
+        return contextPath + "app_direct/" + appName + "/";
+    }
 
     public ProxySpec getSpec(String id) {
         if (id == null || id.isEmpty()) return null;
@@ -37,15 +43,8 @@ public class DefaultSpecProvider implements IProxySpecProvider {
         });
     }
 
-    private static Environment environment;
-
     @Autowired
     public void setEnvironment(Environment env) {
         DefaultSpecProvider.environment = env;
-    }
-
-    public static String getPublicPath(String appName) {
-        String contextPath = SessionHelper.getContextPath(environment, true);
-        return contextPath + "app_direct/" + appName + "/";
     }
 }

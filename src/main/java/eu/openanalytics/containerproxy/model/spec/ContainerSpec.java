@@ -5,7 +5,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.util.Pair;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ContainerSpec {

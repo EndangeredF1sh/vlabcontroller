@@ -7,8 +7,6 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 
-import javax.inject.Inject;
-
 @Configuration
 public class TemplateResolverConfig implements WebMvcConfigurer {
     private final Environment environment;

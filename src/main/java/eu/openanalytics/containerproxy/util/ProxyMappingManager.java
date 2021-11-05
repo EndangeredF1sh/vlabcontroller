@@ -47,8 +47,8 @@ public class ProxyMappingManager {
     private final Map<String, String> mappings = new HashMap<>();
     private final Map<String, URI> defaultTargetMappings = new HashMap<>();
     private final Logger log = LogManager.getLogger(ProxyMappingManager.class);
-    private PathHandler pathHandler;
     private final HeartbeatService heartbeatService;
+    private PathHandler pathHandler;
 
     public ProxyMappingManager(HeartbeatService heartbeatService) {
         this.heartbeatService = heartbeatService;

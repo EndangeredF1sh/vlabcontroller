@@ -7,8 +7,6 @@ import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import javax.inject.Inject;
-
 @Component
 public class StartupEventListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(StartupEventListener.class);

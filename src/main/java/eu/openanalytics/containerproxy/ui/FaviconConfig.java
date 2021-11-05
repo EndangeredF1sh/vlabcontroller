@@ -12,7 +12,6 @@ import org.springframework.util.FileCopyUtils;
 import org.springframework.web.HttpRequestHandler;
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping;
 
-import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

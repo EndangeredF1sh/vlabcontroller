@@ -1,13 +1,13 @@
 package eu.openanalytics.containerproxy.spec.setting.type;
 
-import javax.inject.Inject;
-
 import eu.openanalytics.containerproxy.model.runtime.RuntimeSetting;
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
 import eu.openanalytics.containerproxy.model.spec.RuntimeSettingSpec;
 import eu.openanalytics.containerproxy.spec.ProxySpecException;
 import eu.openanalytics.containerproxy.spec.setting.IRuntimeSettingType;
 import eu.openanalytics.containerproxy.spec.setting.SettingSpecMapper;
+
+import javax.inject.Inject;
 
 /**
  * Example runtime settings:

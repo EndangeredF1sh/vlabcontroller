@@ -19,7 +19,6 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -44,12 +43,9 @@ public class HeartbeatService {
     private final Map<String, Long> proxyHeartbeats = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, HeartbeatStatus> websocketHeartbeats = Collections.synchronizedMap(new HashMap<>());
     private final ScheduledExecutorService heartbeatExecutor = Executors.newScheduledThreadPool(3);
-
-    private volatile boolean enabled;
-
     private final ProxyService proxyService;
     private final Environment environment;
-
+    private volatile boolean enabled;
     @Resource
     private EngagementProperties engagementProperties;
 
