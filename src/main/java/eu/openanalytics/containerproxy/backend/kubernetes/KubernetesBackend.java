@@ -227,7 +227,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 var containerBuilder = new ContainerBuilder()
                     .withImage(spec.getImage())
                     .withCommand(spec.getCmd())
-                    .withName("sp-container-" + container.getId())
+                    .withName(String.format("sp-container-%s", UUID.randomUUID()))
                     .withPorts(
                         spec.getPortMapping().values().stream()
                             .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
@@ -282,7 +282,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var startedPod = kubeClient
             .pods()
             .inNamespace(effectiveKubeNamespace)
-            .create(startupPod);
+            .create(patchedPod);
         
         log.debug("pod started");
         
