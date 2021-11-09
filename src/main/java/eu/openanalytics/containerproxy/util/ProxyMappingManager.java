@@ -167,7 +167,7 @@ public class ProxyMappingManager {
                 log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Streams.stream(request.getHeaderNames().asIterator()).collect(Collectors.toList()));
 
                 // Handle websocket case
-                if (request.getHeaders("Sec-WebSocket-Protocol").hasMoreElements()) {
+                if (request.getHeaders("Upgrade").hasMoreElements()) {
                     return true;
                 }
                 URL testURL = new URL(newTarget + mapping + query);
