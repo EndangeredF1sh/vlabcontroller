@@ -19,25 +19,25 @@ import java.util.Map;
 public class FileBrowserProperties {
     @Getter
     @Setter
-    private String containerImage;
+    private String image;
     @Getter
     @Setter
-    private List<String> containerCmd = List.of();
+    private List<String> cmd = List.of();
     @Getter
     @Setter
-    private Map<String, String> containerEnv = new HashMap<>();
+    private Map<String, String> env = new HashMap<>();
     @Getter
     @Setter
-    private String containerNetwork;
+    private String network;
     @Getter
     @Setter
-    private List<String> containerVolumes = new ArrayList<>();
+    private List<String> volumes = new ArrayList<>();
     @Getter
     @Setter
-    private String containerMemoryLimit;
+    private String memoryLimit;
     @Getter
     @Setter
-    private String containerCpuLimit;
+    private String cpuLimit;
     @Getter
     @Setter
     private int port;
