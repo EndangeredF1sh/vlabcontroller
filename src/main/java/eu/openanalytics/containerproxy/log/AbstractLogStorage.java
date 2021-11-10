@@ -29,14 +29,14 @@ public abstract class AbstractLogStorage implements ILogStorage {
 
     @Override
     public String[] getLogs(Proxy proxy) throws IOException {
-        String[] paths = (String[]) proxy.getContainers().get(0).getParameters().get(PARAM_LOG_PATHS);
+        String[] paths = (String[]) proxy.getContainerGroup().getParameters().get(PARAM_LOG_PATHS);
         if (paths == null) {
             String timestamp = new SimpleDateFormat("yyyyMMdd").format(new Date());
             paths = new String[]{
                     String.format("%s/%s_%s_%s_stdout.log", containerLogPath, proxy.getSpec().getId(), proxy.getId(), timestamp),
                     String.format("%s/%s_%s_%s_stderr.log", containerLogPath, proxy.getSpec().getId(), proxy.getId(), timestamp)
             };
-            proxy.getContainers().get(0).getParameters().put(PARAM_LOG_PATHS, paths);
+            proxy.getContainerGroup().getParameters().put(PARAM_LOG_PATHS, paths);
         }
         return paths;
     }

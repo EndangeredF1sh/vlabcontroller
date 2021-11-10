@@ -1,6 +1,6 @@
 package eu.openanalytics.containerproxy.backend.strategy;
 
-import eu.openanalytics.containerproxy.model.runtime.Container;
+import eu.openanalytics.containerproxy.model.runtime.ContainerGroup;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 
 /**
@@ -11,6 +11,6 @@ import eu.openanalytics.containerproxy.model.runtime.Proxy;
  */
 public interface IProxyTargetMappingStrategy {
 
-    String createMapping(String mappingKey, Container container, Proxy proxy);
+    String createMapping(String mappingKey, ContainerGroup containerGroup, Proxy proxy);
 
 }
