@@ -459,6 +459,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected void doStopProxy(Proxy proxy) throws Exception {
         // wait a bit to make sure there will be a pod to remove
         // prevent orphan pods issue (start an app and sign out quickly)
@@ -508,6 +509,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public BiConsumer<OutputStream, OutputStream> getOutputAttacher(Proxy proxy) {
         var containerGroup = proxy.getContainerGroup();
         var containers = (List<Container>) containerGroup.getParameters().get(PARAM_CONTAINER);

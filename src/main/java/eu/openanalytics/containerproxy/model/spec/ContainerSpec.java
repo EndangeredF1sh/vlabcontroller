@@ -104,41 +104,22 @@ public class ContainerSpec {
 
     public void copy(ContainerSpec target) {
         target.setImage(image);
-        if (cmd != null) target.setCmd(List.copyOf(cmd));
-        if (env != null) {
-            if (target.getEnv() == null) target.setEnv(new HashMap<>());
-            target.getEnv().putAll(env);
-        }
+        target.getCmd().addAll(cmd);
+        target.getEnv().putAll(env);
         target.setEnvFile(envFile);
         target.setNetwork(network);
-        if (networkConnections != null)
-            target.setNetworkConnections(List.copyOf(networkConnections));
-        if (dns != null) target.setDns(List.copyOf(dns));
-        if (volumes != null) target.setVolumes(List.copyOf(volumes));
-        if (portMapping != null) {
-            if (target.getPortMapping() == null) target.setPortMapping(new HashMap<>());
-            target.getPortMapping().putAll(portMapping);
-        }
-        if (ports != null) {
-            if (target.getPorts() == null) target.setPorts(new ArrayList<>());
-            target.getPorts().addAll(this.getPorts());
-            target.getPortMapping().putAll(
-                    ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x))
-            );
-        }
-
+        target.getNetworkConnections().addAll(networkConnections);
+        target.getDns().addAll(dns);
+        target.getVolumes().addAll(volumes);
+        target.getPorts().addAll(ports);
+        target.getPortMapping().putAll(portMapping);
+        target.getPortMapping().putAll(ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x)));
         target.setMemoryRequest(memoryRequest);
         target.setMemoryLimit(memoryLimit);
         target.setCpuRequest(cpuRequest);
         target.setCpuLimit(cpuLimit);
         target.setPrivileged(privileged);
-        if (labels != null) {
-            if (target.getLabels() == null) target.setLabels(new HashMap<>());
-            target.getLabels().putAll(labels);
-        }
-        if (settings != null) {
-            if (target.getSettings() == null) target.setSettings(new HashMap<>());
-            target.getSettings().putAll(settings);
-        }
+        target.getLabels().putAll(labels);
+        target.getSettings().putAll(settings);
     }
 }
