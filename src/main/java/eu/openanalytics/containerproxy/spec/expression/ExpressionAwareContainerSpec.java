@@ -65,6 +65,10 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return resolve(source.getVolumes());
     }
 
+    public List<Integer> getPorts() {
+        return source.getPorts();
+    }
+
     public Map<String, Integer> getPortMapping() {
         return source.getPortMapping();
     }
