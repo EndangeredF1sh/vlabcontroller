@@ -8,7 +8,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.backend.AbstractContainerBackend;
-import eu.openanalytics.containerproxy.model.runtime.Container;
+import eu.openanalytics.containerproxy.model.runtime.ContainerGroup;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
 import eu.openanalytics.containerproxy.service.ProxyService;
@@ -57,6 +57,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     private static final String DEFAULT_API_VERSION = "v1";
 
     private static final String PARAM_POD = "pod";
+    private static final String PARAM_CONTAINER = "container";
     private static final String PARAM_SERVICE = "service";
     private static final String PARAM_NAMESPACE = "namespace";
 
@@ -111,10 +112,10 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     @Override
-    protected Container startContainer(List<ContainerSpec> specs, Proxy proxy) throws Exception {
-        var container = new Container();
-        container.setSpecs(specs);
-        container.setId(UUID.randomUUID().toString());
+    protected ContainerGroup startContainer(List<ContainerSpec> specs, Proxy proxy) throws Exception {
+        var containerGroup = new ContainerGroup();
+        containerGroup.setSpecs(specs);
+        containerGroup.setId(UUID.randomUUID().toString());
 
         var identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
         var identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
@@ -126,6 +127,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         if (uidNamespace) {
             kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : String.format("%s-%s", namespacePrefix, proxy.getUserId());
         }
+        proxy.setNamespace(kubeNamespace);
 
         var apiVersion = getProperty(PROPERTY_API_VERSION, DEFAULT_API_VERSION);
 
@@ -148,10 +150,10 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         var objectMetaBuilder = new ObjectMetaBuilder()
                 .withNamespace(kubeNamespace)
-                .withName("sp-pod-" + container.getId())
+                .withName("sp-pod-" + containerGroup.getId())
                 .addToLabels(allLabels)
                 .addToLabels(identifierLabel, identifierValue)
-                .addToLabels("app", container.getId());
+                .addToLabels("app", containerGroup.getId());
 
         var podBuilder = new PodBuilder()
                 .withApiVersion(apiVersion)
@@ -251,6 +253,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     return containerBuilder.build();
                 }))
                 .collect(Collectors.toList());
+        containerGroup.getParameters().put(PARAM_CONTAINER, containers);
 
         log.debug("containers created: {}", containers.size());
         log.debug("volumes created: {}", volumes.size());
@@ -274,7 +277,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         JsonPatch patch = readPatchFromSpec(proxy);
         Pod patchedPod = podPatcher.patchWithDebug(startupPod, patch);
         final String effectiveKubeNamespace = patchedPod.getMetadata().getNamespace(); // use the namespace of the patched Pod, in case the patch changes the namespace.
-        container.getParameters().put(PARAM_NAMESPACE, effectiveKubeNamespace);
+        containerGroup.getParameters().put(PARAM_NAMESPACE, effectiveKubeNamespace);
 
         // create additional manifests -> use the effective (i.e. patched) namespace if no namespace is provided
         createAdditionalManifests(proxy, effectiveKubeNamespace);
@@ -286,19 +289,19 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         log.debug("pod started");
 
-        var pod = waitUntilPodReadyOrDie(proxy, container, startedPod);
-        container.getParameters().put(PARAM_POD, pod);
+        var pod = waitUntilPodReadyOrDie(startedPod);
+        containerGroup.getParameters().put(PARAM_POD, pod);
         log.debug("pod registered");
 
         // If SP runs inside the cluster, it can access pods directly and doesn't need any port publishing service.
-        var service = makeServiceIfNecessary(specs, proxy, container, identifierLabel, identifierValue, apiVersion, allLabels, effectiveKubeNamespace);
-        container.getParameters().put(PARAM_SERVICE, service);
+        var service = makeServiceIfNecessary(specs, proxy, containerGroup, identifierLabel, identifierValue, apiVersion, allLabels, effectiveKubeNamespace);
+        containerGroup.getParameters().put(PARAM_SERVICE, service);
 
         log.debug("service registered");
 
-        calculateProxyRoutes(specs, proxy, container, service);
+        calculateProxyRoutes(specs, proxy, containerGroup, service);
 
-        return container;
+        return containerGroup;
     }
 
     private void createAdditionalManifests(Proxy proxy, String namespace) {
@@ -335,28 +338,26 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
 
-    private Pod waitUntilPodReadyOrDie(Proxy proxy, Container container, Pod startedPod) {
+    private Pod waitUntilPodReadyOrDie(Pod startedPod) {
         var totalWaitMs = Integer.parseInt(environment.getProperty("proxy.kubernetes.pod-wait-time", "60000"));
         var maxTries = totalWaitMs / 1000;
-        Retrying.retry(i -> {
-            if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
+        boolean result = Retrying.retry(i -> {
+            var pod = kubeClient.resource(startedPod).fromServer().get();
+            if (!Readiness.isPodReady(pod)) {
                 if (i > 1)
                     log.debug(String.format("Container not ready yet, trying again (%d/%d)", i, maxTries));
                 return false;
             }
             return true;
         }, maxTries, 1000);
-        if (!Readiness.isPodReady(kubeClient.resource(startedPod).fromServer().get())) {
-            var pod = kubeClient.resource(startedPod).fromServer().get();
-            container.getParameters().put(PARAM_POD, pod);
-            proxy.getContainers().add(container);
+        if (!result){
             throw new ContainerProxyException("Container did not become ready in time");
         }
         return kubeClient.resource(startedPod).fromServer().get();
     }
 
     // Calculate proxy routes for all configured ports.
-    private void calculateProxyRoutes(List<ContainerSpec> specs, Proxy proxy, Container container, Service service) throws Exception {
+    private void calculateProxyRoutes(List<ContainerSpec> specs, Proxy proxy, ContainerGroup containerGroup, Service service) throws Exception {
         for (var entry : specs.stream()
                 .flatMap(x -> x.getPortMapping().entrySet().stream())
                 .collect(Collectors.toList())) {
@@ -364,14 +365,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     .filter(p -> p.getPort().equals(entry.getValue())).map(ServicePort::getNodePort)
                     .findAny().orElse(-1);
 
-            var mapping = mappingStrategy.createMapping(entry.getKey(), container, proxy);
-            var target = calculateTarget(container, entry.getValue(), servicePort);
+            var mapping = mappingStrategy.createMapping(entry.getKey(), containerGroup, proxy);
+            var target = calculateTarget(containerGroup, entry.getValue(), servicePort);
             log.debug("adding {} to {}", target, mapping);
             proxy.getTargets().put(mapping, target);
         }
     }
 
-    private Service makeServiceIfNecessary(List<ContainerSpec> specs, Proxy proxy, Container container, String identifierLabel, String identifierValue, String apiVersion, Map<String, String> allLabels, String effectiveKubeNamespace) {
+    private Service makeServiceIfNecessary(List<ContainerSpec> specs, Proxy proxy, ContainerGroup containerGroup, String identifierLabel, String identifierValue, String apiVersion, Map<String, String> allLabels, String effectiveKubeNamespace) {
         Service service = null;
         if (!isUseInternalNetwork()) {
             var servicePorts = specs.stream()
@@ -383,7 +384,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     .withApiVersion(apiVersion)
                     .withKind("Service")
                     .withNewMetadata()
-                    .withName("sp-service-" + container.getId())
+                    .withName("sp-service-" + containerGroup.getId())
                     .addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
                     .addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
                     .addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
@@ -391,7 +392,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     .addToLabels(allLabels)
                     .endMetadata()
                     .withNewSpec()
-                    .addToSelector("app", container.getId())
+                    .addToSelector("app", containerGroup.getId())
                     .withType("NodePort")
                     .withPorts(servicePorts)
                     .endSpec()
@@ -439,12 +440,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
         return service.getStatus().getLoadBalancer() != null;
     }
 
-    protected URI calculateTarget(Container container, int containerPort, int servicePort) throws Exception {
+    protected URI calculateTarget(ContainerGroup containerGroup, int containerPort, int servicePort) throws Exception {
         var targetProtocol = getProperty(PROPERTY_CONTAINER_PROTOCOL, DEFAULT_TARGET_PROTOCOL);
         String targetHostName;
         int targetPort;
 
-        var pod = (Pod) container.getParameters().get(PARAM_POD);
+        var pod = (Pod) containerGroup.getParameters().get(PARAM_POD);
 
         if (isUseInternalNetwork()) {
             targetHostName = pod.getStatus().getPodIP();
@@ -464,8 +465,10 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var retry = 20;
         var interval = 3000;
         var responded = false;
+        var containerGroup = proxy.getContainerGroup();
         for (var i = 0; i < retry; i++) {
-            if (proxy.getContainers().isEmpty()) {
+            var containers = (List<Container>) containerGroup.getParameters().get(PARAM_CONTAINER);
+            if (containers.isEmpty()) {
                 log.debug("Proxy pod unresponsive, retrying ({}/{})", i + 1, retry);
                 Thread.sleep(interval);
             } else {
@@ -487,35 +490,35 @@ public class KubernetesBackend extends AbstractContainerBackend {
             kubeClient.services().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
             throw new ContainerProxyException("Failed to stop container: no pod was founded");
         }
-        for (var container : proxy.getContainers()) {
-            var kubeNamespace = container.getParameters().get(PARAM_NAMESPACE).toString();
-            if (kubeNamespace == null) {
-                kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
-            }
 
-            var pod = Pod.class.cast(container.getParameters().get(PARAM_POD));
-            if (pod != null) kubeClient.pods().inNamespace(kubeNamespace).delete(pod);
-            var service = Service.class.cast(container.getParameters().get(PARAM_SERVICE));
-            if (service != null) kubeClient.services().inNamespace(kubeNamespace).delete(service);
+        var kubeNamespace = containerGroup.getParameters().get(PARAM_NAMESPACE).toString();
+        if (kubeNamespace == null) {
+            kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
+        }
 
-            // delete additional manifests
-            for (var fullObject : getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
-                kubeClient.resource(fullObject).delete();
-            }
+        var pod = (Pod) containerGroup.getParameters().get(PARAM_POD);
+        if (pod != null) kubeClient.pods().inNamespace(kubeNamespace).delete(pod);
+        var service = (Service) containerGroup.getParameters().get(PARAM_SERVICE);
+        if (service != null) kubeClient.services().inNamespace(kubeNamespace).delete(service);
+
+        // delete additional manifests
+        for (var fullObject : getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
+            kubeClient.resource(fullObject).delete();
         }
     }
 
     @Override
     public BiConsumer<OutputStream, OutputStream> getOutputAttacher(Proxy proxy) {
-        if (proxy.getContainers().isEmpty()) return null;
+        var containerGroup = proxy.getContainerGroup();
+        var containers = (List<Container>) containerGroup.getParameters().get(PARAM_CONTAINER);
+        if (containers.isEmpty()) return null;
         return (stdOut, stdErr) -> {
             try {
-                var container = proxy.getContainers().get(0);
-                var kubeNamespace = container.getParameters().get(PARAM_NAMESPACE).toString();
+                var kubeNamespace = containerGroup.getParameters().get(PARAM_NAMESPACE).toString();
                 if (kubeNamespace == null) {
                     kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
                 }
-                var watcher = kubeClient.pods().inNamespace(kubeNamespace).withName("sp-pod-" + container.getId()).watchLog();
+                var watcher = kubeClient.pods().inNamespace(kubeNamespace).withName("sp-pod-" + containerGroup.getId()).watchLog();
                 IOUtils.copy(watcher.getOutput(), stdOut);
             } catch (IOException e) {
                 log.error("Error while attaching to container output", e);

@@ -5,9 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Proxy {
@@ -34,7 +32,7 @@ public class Proxy {
     private String namespace;
     @Getter
     @Setter
-    private List<Container> containers = new ArrayList<>();
+    private ContainerGroup containerGroup;
     @Getter
     @Setter
     private Map<String, URI> targets = new HashMap<>();

@@ -10,7 +10,7 @@ import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.auth.IAuthenticationBackend;
 import eu.openanalytics.containerproxy.backend.strategy.IProxyTargetMappingStrategy;
 import eu.openanalytics.containerproxy.backend.strategy.IProxyTestStrategy;
-import eu.openanalytics.containerproxy.model.runtime.Container;
+import eu.openanalytics.containerproxy.model.runtime.ContainerGroup;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.runtime.ProxyStatus;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
@@ -153,13 +153,11 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
         .map(ContainerSpec.class::cast)
         .collect(Collectors.toList());
 
-        Container c = startContainer(eSpecs, proxy);
-        c.setSpecs(eSpecs);
-
-        proxy.getContainers().add(c);
+        ContainerGroup c = startContainer(eSpecs, proxy);
+        proxy.setContainerGroup(c);
     }
 
-    protected abstract Container startContainer(List<ContainerSpec> spec, Proxy proxy) throws Exception;
+    protected abstract ContainerGroup startContainer(List<ContainerSpec> spec, Proxy proxy) throws Exception;
 
     @Override
     public void stopProxy(Proxy proxy) throws ContainerProxyException {

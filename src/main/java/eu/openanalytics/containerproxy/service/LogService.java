@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.inject.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ExecutorService;
@@ -65,7 +64,7 @@ public class LogService {
                 if (streams == null || streams.length < 2) {
                     log.error("Failed to attach logging of proxy " + proxy.getId() + ": no output streams defined");
                 } else {
-                    proxy.getContainers().get(0).getParameters().put(PARAM_STREAMS, streams);
+                    proxy.getContainerGroup().getParameters().put(PARAM_STREAMS, streams);
                     if (log.isDebugEnabled()) log.debug("Container logging started for proxy " + proxy.getId());
                     // Note that this call will block until the container is stopped.
                     outputAttacher.accept(streams[0], streams[1]);
@@ -80,7 +79,7 @@ public class LogService {
     public void detach(Proxy proxy) {
         if (!isLoggingEnabled()) return;
 
-        OutputStream[] streams = (OutputStream[]) proxy.getContainers().get(0).getParameters().get(PARAM_STREAMS);
+        OutputStream[] streams = (OutputStream[]) proxy.getContainerGroup().getParameters().get(PARAM_STREAMS);
         if (streams == null || streams.length < 2) {
             log.warn("Cannot detach container logging: streams not found");
             return;
