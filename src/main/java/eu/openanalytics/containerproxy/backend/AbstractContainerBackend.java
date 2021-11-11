@@ -77,7 +77,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     @Lazy
     // Note: lazy needed to work around early initialization conflict
     protected IAuthenticationBackend authBackend;
-    protected String realmId;
     protected String instanceId = null;
     private boolean useInternalNetwork;
     private boolean privileged;
@@ -87,7 +86,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
         // If this application runs as a container itself, things like port publishing can be omitted.
         useInternalNetwork = Boolean.parseBoolean(getProperty(PROPERTY_INTERNAL_NETWORKING, "false"));
         privileged = Boolean.parseBoolean(getProperty(PROPERTY_PRIVILEGED, "false"));
-        realmId = environment.getProperty("proxy.realm-id");
         try {
             instanceId = calculateInstanceId();
             log.info("Hash of config is: " + instanceId);
@@ -137,9 +135,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
 
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, true, proxy.getId());
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, true, proxy.getSpec().getId());
-            if (realmId != null) {
-                spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, true, realmId);
-            }
             spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, true, proxy.getUserId());
             spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, true, String.valueOf(proxy.getCreatedTimestamp()));
             String[] groups = userService.getGroups(userService.getCurrentAuth());
