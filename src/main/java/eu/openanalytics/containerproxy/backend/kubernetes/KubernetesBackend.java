@@ -139,26 +139,16 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         log.debug("imagePullSecrets: {}", imagePullSecrets);
 
-        log.debug("all labels (array): {}", specs.stream()
-                .map(ContainerSpec::getLabels).collect(Collectors.toList()));
+        var labels = proxy.getSpec().getLabels();
 
-        var allLabels = specs.stream()
-                .flatMap(x -> x.getLabels().entrySet().stream())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        log.debug("all labels (map): {}", allLabels);
+        log.debug("all labels (map): {}", labels);
 
         var objectMetaBuilder = new ObjectMetaBuilder()
                 .withNamespace(kubeNamespace)
                 .withName("sp-pod-" + containerGroup.getId())
-                .addToLabels(allLabels)
+                .addToLabels(labels)
                 .addToLabels(identifierLabel, identifierValue)
                 .addToLabels("app", containerGroup.getId());
-
-        var podBuilder = new PodBuilder()
-                .withApiVersion(apiVersion)
-                .withKind("Pod")
-                .withMetadata(objectMetaBuilder.build());
 
         // Handle runtime labels
         specs.stream()
@@ -171,6 +161,10 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     }
                 });
 
+        var podBuilder = new PodBuilder()
+            .withApiVersion(apiVersion)
+            .withKind("Pod")
+            .withMetadata(objectMetaBuilder.build());
 
         List<Volume> volumes = new ArrayList<>();
         var containers = specs.stream()
@@ -294,7 +288,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         log.debug("pod registered");
 
         // If SP runs inside the cluster, it can access pods directly and doesn't need any port publishing service.
-        var service = makeServiceIfNecessary(specs, proxy, containerGroup, identifierLabel, identifierValue, apiVersion, allLabels, effectiveKubeNamespace);
+        var service = makeServiceIfNecessary(specs, proxy, containerGroup, identifierLabel, identifierValue, apiVersion, labels, effectiveKubeNamespace);
         containerGroup.getParameters().put(PARAM_SERVICE, service);
 
         log.debug("service registered");

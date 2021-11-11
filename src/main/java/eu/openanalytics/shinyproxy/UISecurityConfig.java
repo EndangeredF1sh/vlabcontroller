@@ -8,7 +8,7 @@ import eu.openanalytics.containerproxy.service.UserService;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class UISecurityConfig implements ICustomSecurityConfig {
@@ -29,12 +29,9 @@ public class UISecurityConfig implements ICustomSecurityConfig {
 
             // Limit access to the app pages according to spec permissions
             for (ProxySpec spec : proxyService.getProxySpecs(null, true)) {
-                if (spec.getAccessControl() == null) continue;
-
-                String[] groups = spec.getAccessControl().getGroups();
-                if (groups == null || groups.length == 0) continue;
-
-                String[] appGroups = Arrays.stream(groups).map(s -> s.toUpperCase()).toArray(i -> new String[i]);
+                List<String> groups = spec.getAccessGroups();
+                if (groups.isEmpty()) continue;
+                String[] appGroups = groups.stream().map(String::toUpperCase).toArray(String[]::new);
                 http.authorizeRequests().antMatchers("/app/" + spec.getId()).hasAnyRole(appGroups);
             }
 

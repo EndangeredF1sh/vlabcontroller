@@ -24,10 +24,9 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-
-import static eu.openanalytics.containerproxy.model.spec.ContainerSpec.getProxySpec;
 
 @Controller
 public class FileBrowserController extends BaseController {
@@ -60,7 +59,9 @@ public class FileBrowserController extends BaseController {
         Proxy proxy = proxyService.findProxy(p -> p.getSpec().getId().equals(id) && userService.isOwner(p), false);
         if (proxy == null) {
             if (fileBrowserProperties != null) {
+                log.error("filebrowser properties labels {}", fileBrowserProperties.getLabels());
                 ProxySpec spec = fileBrowserSpecTranslate(fileBrowserProperties);
+                log.error("filebrowser labels: {}", spec.getLabels());
                 ProxySpec resolvedSpec = proxyService.resolveProxySpec(spec, null, null);
                 try {
                     proxy = proxyService.startProxy(resolvedSpec, false);
@@ -93,6 +94,7 @@ public class FileBrowserController extends BaseController {
         ProxySpec spec = new ProxySpec();
         spec.setId("filebrowser");
         spec.setDisplayName("File Browser");
+        spec.setLabels(fbp.getLabels());
         ContainerSpec cSpec = new ContainerSpec();
         if (fbp.getKubernetesPodPatches() != null) {
             try {
@@ -117,7 +119,18 @@ public class FileBrowserController extends BaseController {
         cSpec.setVolumes(fbp.getVolumes());
         cSpec.setMemoryLimit(fbp.getMemoryLimit());
         cSpec.setCpuLimit(fbp.getCpuLimit());
-        return getProxySpec(spec, cSpec, fbp.getLabels(), fbp.getPort());
+
+        Map<String, Integer> portMapping = new HashMap<>();
+        if (fbp.getPort() > 0) {
+            portMapping.put("default", fbp.getPort());
+        } else {
+            portMapping.put("default", 3838);
+        }
+
+        cSpec.setPortMapping(portMapping);
+        spec.setContainerSpecs(List.of(cSpec));
+
+        return spec;
     }
 
     private boolean awaitReady(Proxy proxy) {

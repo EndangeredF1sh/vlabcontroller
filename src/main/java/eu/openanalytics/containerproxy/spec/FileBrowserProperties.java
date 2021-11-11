@@ -22,7 +22,7 @@ public class FileBrowserProperties {
     private String image;
     @Getter
     @Setter
-    private List<String> cmd = List.of();
+    private List<String> cmd = new ArrayList<>();
     @Getter
     @Setter
     private Map<String, String> env = new HashMap<>();
@@ -41,7 +41,6 @@ public class FileBrowserProperties {
     @Getter
     @Setter
     private int port;
-
     @Getter
     @Setter
     private String kubernetesPodPatches;
@@ -50,5 +49,5 @@ public class FileBrowserProperties {
     private List<String> kubernetesAdditionalManifests = new ArrayList<>();
     @Getter
     @Setter
-    private Map<String, String> labels;
+    private Map<String, String> labels = new HashMap<>();
 }
