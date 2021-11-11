@@ -81,12 +81,9 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected String instanceId = null;
     private boolean useInternalNetwork;
     private boolean privileged;
-    private boolean unsafeLabel;
 
     @Override
     public void initialize() throws ContainerProxyException {
-        unsafeLabel = Boolean.parseBoolean(environment.getProperty("proxy.unsafe-label", "false"));
-        log.info("Non-safe Labels Mode: " + unsafeLabel);
         // If this application runs as a container itself, things like port publishing can be omitted.
         useInternalNetwork = Boolean.parseBoolean(getProperty(PROPERTY_INTERNAL_NETWORKING, "false"));
         privileged = Boolean.parseBoolean(getProperty(PROPERTY_PRIVILEGED, "false"));
@@ -138,13 +135,13 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
             spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
 
-            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, unsafeLabel, proxy.getId());
-            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, unsafeLabel, proxy.getSpec().getId());
+            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, true, proxy.getId());
+            spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, true, proxy.getSpec().getId());
             if (realmId != null) {
-                spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, unsafeLabel, realmId);
+                spec.addRuntimeLabel(RUNTIME_LABEL_REALM_ID, true, realmId);
             }
-            spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, unsafeLabel, proxy.getUserId());
-            spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, unsafeLabel, String.valueOf(proxy.getCreatedTimestamp()));
+            spec.addRuntimeLabel(RUNTIME_LABEL_USER_ID, true, proxy.getUserId());
+            spec.addRuntimeLabel(RUNTIME_LABEL_CREATED_TIMESTAMP, true, String.valueOf(proxy.getCreatedTimestamp()));
             String[] groups = userService.getGroups(userService.getCurrentAuth());
             spec.addRuntimeLabel(RUNTIME_LABEL_USER_GROUPS, false, String.join(",", groups));
 
