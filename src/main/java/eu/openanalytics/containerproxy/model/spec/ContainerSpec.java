@@ -56,9 +56,6 @@ public class ContainerSpec {
     private String cpuLimit;
     @Getter
     @Setter
-    private Map<String, String> labels = new HashMap<>();
-    @Getter
-    @Setter
     private Map<String, String> settings = new HashMap<>();
 
     /**
@@ -72,22 +69,6 @@ public class ContainerSpec {
      */
     @Setter
     private Map<String, Pair<Boolean, String>> runtimeLabels = new HashMap<>();
-
-    public static ProxySpec getProxySpec(ProxySpec to, ContainerSpec cSpec, Map<String, String> labels, int port) {
-        cSpec.setLabels(labels);
-
-        Map<String, Integer> portMapping = new HashMap<>();
-        if (port > 0) {
-            portMapping.put("default", port);
-        } else {
-            portMapping.put("default", 3838);
-        }
-        cSpec.setPortMapping(portMapping);
-
-        to.setContainerSpecs(List.of(cSpec));
-
-        return to;
-    }
 
     @JsonIgnore
     public Map<String, Pair<Boolean, String>> getRuntimeLabels() {
@@ -119,7 +100,6 @@ public class ContainerSpec {
         target.setCpuRequest(cpuRequest);
         target.setCpuLimit(cpuLimit);
         target.setPrivileged(privileged);
-        target.getLabels().putAll(labels);
         target.getSettings().putAll(settings);
     }
 }

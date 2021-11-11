@@ -109,11 +109,8 @@ public class UserService {
     public boolean canAccess(Authentication auth, ProxySpec spec) {
         if (auth == null || spec == null) return false;
         if (auth instanceof AnonymousAuthenticationToken) return !authBackend.hasAuthorization();
-
-        if (spec.getAccessControl() == null) return true;
-
-        String[] groups = spec.getAccessControl().getGroups();
-        if (groups == null || groups.length == 0) return true;
+        List<String> groups = spec.getAccessGroups();
+        if (groups.isEmpty()) return true;
         for (String group : groups) {
             if (isMember(auth, group)) return true;
         }

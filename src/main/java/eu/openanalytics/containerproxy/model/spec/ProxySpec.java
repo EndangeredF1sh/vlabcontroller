@@ -22,17 +22,18 @@ public class ProxySpec {
     @Getter
     @Setter
     private String logoURL;
-
     @Getter
     @Setter
-    private ProxyAccessControl accessControl;
+    private List<String> accessGroups = new ArrayList<>();
     @Getter
     @Setter
-    private List<ContainerSpec> containerSpecs;
+    private List<ContainerSpec> containerSpecs = new ArrayList<>();
     @Getter
     @Setter
-    private List<RuntimeSettingSpec> runtimeSettingSpecs;
-
+    private List<RuntimeSettingSpec> runtimeSettingSpecs = new ArrayList<>();
+    @Getter
+    @Setter
+    private Map<String, String> labels = new HashMap<>();
     @Getter
     @Setter
     private Map<String, String> settings = new HashMap<>();
@@ -48,7 +49,7 @@ public class ProxySpec {
     private List<String> kubernetesAdditionalManifests = new ArrayList<>();
     @Getter
     @Setter
-    private List<SubApplicationSpec> subApps;
+    private List<SubApplicationSpec> subApps = new ArrayList<>();
     @Getter
     @Setter
     private String defaultTutorialLink;
@@ -60,47 +61,31 @@ public class ProxySpec {
         target.setLogoURL(logoURL);
         target.setDefaultTutorialLink(defaultTutorialLink);
 
-        if (accessControl != null) {
-            if (target.getAccessControl() == null) target.setAccessControl(new ProxyAccessControl());
-            accessControl.copy(target.getAccessControl());
+        target.getAccessGroups().addAll(accessGroups);
+
+        for (ContainerSpec spec : containerSpecs) {
+            ContainerSpec copy = new ContainerSpec();
+            spec.copy(copy);
+            copy.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
+            target.getContainerSpecs().add(copy);
         }
 
-        if (containerSpecs != null) {
-            if (target.getContainerSpecs() == null) target.setContainerSpecs(new ArrayList<>());
-            for (ContainerSpec spec : containerSpecs) {
-                ContainerSpec copy = new ContainerSpec();
-                spec.copy(copy);
-                copy.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
-                target.getContainerSpecs().add(copy);
-            }
+        for (RuntimeSettingSpec spec : runtimeSettingSpecs) {
+            RuntimeSettingSpec copy = new RuntimeSettingSpec();
+            spec.copy(copy);
+            target.getRuntimeSettingSpecs().add(copy);
         }
 
-        if (runtimeSettingSpecs != null) {
-            if (target.getRuntimeSettingSpecs() == null) target.setRuntimeSettingSpecs(new ArrayList<>());
-            for (RuntimeSettingSpec spec : runtimeSettingSpecs) {
-                RuntimeSettingSpec copy = new RuntimeSettingSpec();
-                spec.copy(copy);
-                target.getRuntimeSettingSpecs().add(copy);
-            }
-        }
-
-        if (settings != null) {
-            if (target.getSettings() == null) target.setSettings(new HashMap<>());
-            target.getSettings().putAll(settings);
-        }
-
+        target.getLabels().putAll(labels);
+        target.getSettings().putAll(settings);
 
         if (kubernetesPodPatches != null) {
             target.setKubernetesPodPatches(kubernetesPodPatches);
         }
 
-        if (kubernetesAdditionalManifests != null) {
-            target.setKubernetesAdditionalManifests(new ArrayList<>(kubernetesAdditionalManifests));
-        }
+        target.getKubernetesAdditionalManifests().addAll(kubernetesAdditionalManifests);
 
-        if (subApps != null) {
-            target.setSubApps(subApps);
-        }
+        target.getSubApps().addAll(subApps);
     }
 
 }
