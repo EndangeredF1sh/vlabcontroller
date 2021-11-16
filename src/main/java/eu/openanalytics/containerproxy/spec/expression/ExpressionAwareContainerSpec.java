@@ -2,6 +2,8 @@ package eu.openanalytics.containerproxy.spec.expression;
 
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import org.springframework.data.util.Pair;
 
 import java.util.HashMap;
@@ -39,7 +41,6 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     }
 
     public Map<String, String> getEnv() {
-        if (source.getEnv() == null) return null;
         Map<String, String> env = new HashMap<>();
         source.getEnv().entrySet().stream().forEach(e -> env.put(e.getKey(), resolve(e.getValue())));
         return env;
@@ -59,10 +60,6 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
 
     public List<String> getDns() {
         return resolve(source.getDns());
-    }
-
-    public List<String> getVolumes() {
-        return resolve(source.getVolumes());
     }
 
     public List<Integer> getPorts() {
@@ -100,10 +97,20 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     }
 
     public Map<String, String> getSettings() {
-        if (source.getSettings() == null) return null;
         Map<String, String> settings = new HashMap<>();
         source.getSettings().entrySet().stream().forEach(e -> settings.put(e.getKey(), resolve(e.getValue())));
         return settings;
+    }
+
+    public List<VolumeMount> getVolumeMount() {
+        return source.getVolumeMount().stream().map(volumeMount -> new VolumeMountBuilder()
+            .withMountPath(resolve(volumeMount.getMountPath()))
+            .withMountPropagation(resolve(volumeMount.getMountPropagation()))
+            .withName(resolve(volumeMount.getName()))
+            .withSubPath(resolve(volumeMount.getSubPath()))
+            .withSubPathExpr(resolve(volumeMount.getSubPathExpr()))
+            .withReadOnly(volumeMount.getReadOnly())
+            .build()).collect(Collectors.toList());
     }
 
     protected String resolve(String expression) {

@@ -59,9 +59,7 @@ public class FileBrowserController extends BaseController {
         Proxy proxy = proxyService.findProxy(p -> p.getSpec().getId().equals(id) && userService.isOwner(p), false);
         if (proxy == null) {
             if (fileBrowserProperties != null) {
-                log.error("filebrowser properties labels {}", fileBrowserProperties.getLabels());
                 ProxySpec spec = fileBrowserSpecTranslate(fileBrowserProperties);
-                log.error("filebrowser labels: {}", spec.getLabels());
                 ProxySpec resolvedSpec = proxyService.resolveProxySpec(spec, null, null);
                 try {
                     proxy = proxyService.startProxy(resolvedSpec, false);
@@ -116,7 +114,6 @@ public class FileBrowserController extends BaseController {
 
         cSpec.setEnv(env);
         cSpec.setNetwork(fbp.getNetwork());
-        cSpec.setVolumes(fbp.getVolumes());
         cSpec.setMemoryLimit(fbp.getMemoryLimit());
         cSpec.setCpuLimit(fbp.getCpuLimit());
 
