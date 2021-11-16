@@ -4,13 +4,11 @@ import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.auth.IAuthenticationBackend;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.runtime.ProxyStatus;
-import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
 import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.service.UserService;
 import eu.openanalytics.containerproxy.spec.FileBrowserProperties;
 import eu.openanalytics.containerproxy.util.Retrying;
-import eu.openanalytics.containerproxy.util.SessionHelper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Lazy;
@@ -24,7 +22,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -90,43 +87,9 @@ public class FileBrowserController extends BaseController {
 
     private ProxySpec fileBrowserSpecTranslate(FileBrowserProperties fbp) {
         ProxySpec spec = new ProxySpec();
+        fbp.copy(spec);
         spec.setId("filebrowser");
         spec.setDisplayName("File Browser");
-        spec.setLabels(fbp.getLabels());
-        ContainerSpec cSpec = new ContainerSpec();
-        if (fbp.getKubernetesPodPatches() != null) {
-            try {
-                spec.setKubernetesPodPatches(fbp.getKubernetesPodPatches());
-            } catch (Exception e) {
-                throw new IllegalArgumentException("Configuration error: file browser has invalid kubernetes-pod-patches");
-            }
-        }
-        spec.setKubernetesAdditionalManifests(fbp.getKubernetesAdditionalManifests());
-        cSpec.setImage(fbp.getImage());
-        cSpec.setCmd(fbp.getCmd());
-        Map<String, String> env = fbp.getEnv();
-        if (env == null) {
-            env = new HashMap<>();
-        }
-
-        String contextPath = SessionHelper.getContextPath(environment, true);
-        env.put("SHINYPROXY_PUBLIC_PATH", contextPath + "app_direct/filebrowser/");
-
-        cSpec.setEnv(env);
-        cSpec.setNetwork(fbp.getNetwork());
-        cSpec.setMemoryLimit(fbp.getMemoryLimit());
-        cSpec.setCpuLimit(fbp.getCpuLimit());
-
-        Map<String, Integer> portMapping = new HashMap<>();
-        if (fbp.getPort() > 0) {
-            portMapping.put("default", fbp.getPort());
-        } else {
-            portMapping.put("default", 3838);
-        }
-
-        cSpec.setPortMapping(portMapping);
-        spec.setContainerSpecs(List.of(cSpec));
-
         return spec;
     }
 
