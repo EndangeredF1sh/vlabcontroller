@@ -24,7 +24,6 @@ import javax.json.JsonPatch;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.data.util.Pair;
 
 import javax.inject.Inject;
 import java.io.ByteArrayInputStream;
@@ -70,6 +69,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
     @Inject
     private ProxyService proxyService;
+
+    @Inject
+    private ObjectMapper objectMapper;
 
     private KubernetesClient kubeClient;
 
@@ -166,31 +168,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
             .withKind("Pod")
             .withMetadata(objectMetaBuilder.build());
 
-        List<Volume> volumes = new ArrayList<>();
         var containers = specs.stream()
                 .map(unchecked(spec -> {
-                    var volumeStrings = spec.getVolumes().stream()
-                            .map(x -> x.split(":"))
-                            .map(x -> Pair.of(x[0], x[1]))
-                            .collect(Collectors.toList());
-
-                    var volumeMounts = new ArrayList<VolumeMount>();
-                    for (var i = 0; i < volumeStrings.size(); i++) {
-                        var name = "shinyproxy-volume-" + i;
-                        var x = volumeStrings.get(i);
-                        var volume = new VolumeBuilder()
-                                .withName(name)
-                                .withNewPersistentVolumeClaim(x.getFirst(), false)
-                                .build();
-                        var volumeMount = new VolumeMountBuilder()
-                                .withName(name)
-                                .withMountPath(x.getSecond())
-                                .build();
-
-                        volumes.add(volume);
-                        volumeMounts.add(volumeMount);
-                    }
-
+                    var volumeMounts = spec.getVolumeMount();
                     var envVars = buildEnv(spec, proxy).stream()
                             .map(envString -> {
                                 var e = envString.split("=");
@@ -248,6 +228,17 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 }))
                 .collect(Collectors.toList());
         containerGroup.getParameters().put(PARAM_CONTAINER, containers);
+        SpecExpressionContext context = SpecExpressionContext.create(proxy, proxy.getSpec());
+        List<Volume> volumes = proxy.getSpec().getKubernetesVolumes().stream().map(volume -> {
+            try {
+                String volumeString = objectMapper.writeValueAsString(volume);
+                volumeString = expressionResolver.evaluateToString(volumeString, context);
+                return objectMapper.readValue(volumeString, Volume.class);
+            } catch (Exception e) {
+                log.error(e);
+                return null;
+            }
+        }).collect(Collectors.toList());
 
         log.debug("containers created: {}", containers.size());
         log.debug("volumes created: {}", volumes.size());

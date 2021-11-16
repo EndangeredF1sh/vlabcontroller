@@ -1,6 +1,7 @@
 package eu.openanalytics.containerproxy.model.spec;
 
 import eu.openanalytics.containerproxy.spec.impl.DefaultSpecProvider;
+import io.fabric8.kubernetes.api.model.Volume;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -37,6 +38,9 @@ public class ProxySpec {
     @Getter
     @Setter
     private Map<String, String> settings = new HashMap<>();
+    @Getter
+    @Setter
+    private List<Volume> kubernetesVolumes = new ArrayList<>();
 
     /**
      * Returns the Kubernetes Pod Patch as JsonValue (i.e. array) for nice representation in API requests.
@@ -78,6 +82,7 @@ public class ProxySpec {
 
         target.getLabels().putAll(labels);
         target.getSettings().putAll(settings);
+        target.getKubernetesVolumes().addAll(kubernetesVolumes);
 
         if (kubernetesPodPatches != null) {
             target.setKubernetesPodPatches(kubernetesPodPatches);

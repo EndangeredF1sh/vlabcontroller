@@ -1,6 +1,7 @@
 package eu.openanalytics.containerproxy.model.spec;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.fabric8.kubernetes.api.model.VolumeMount;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.util.Pair;
@@ -32,9 +33,6 @@ public class ContainerSpec {
     private List<String> dns = new ArrayList<>();
     @Getter
     @Setter
-    private List<String> volumes = new ArrayList<>();
-    @Getter
-    @Setter
     private List<Integer> ports = new ArrayList<>();
     @Getter
     @Setter
@@ -54,6 +52,9 @@ public class ContainerSpec {
     @Getter
     @Setter
     private String cpuLimit;
+    @Getter
+    @Setter
+    private List<VolumeMount> volumeMount = new ArrayList<>();
     @Getter
     @Setter
     private Map<String, String> settings = new HashMap<>();
@@ -91,7 +92,6 @@ public class ContainerSpec {
         target.setNetwork(network);
         target.getNetworkConnections().addAll(networkConnections);
         target.getDns().addAll(dns);
-        target.getVolumes().addAll(volumes);
         target.getPorts().addAll(ports);
         target.getPortMapping().putAll(portMapping);
         target.getPortMapping().putAll(ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x)));
@@ -100,6 +100,7 @@ public class ContainerSpec {
         target.setCpuRequest(cpuRequest);
         target.setCpuLimit(cpuLimit);
         target.setPrivileged(privileged);
+        target.getVolumeMount().addAll(volumeMount);
         target.getSettings().putAll(settings);
     }
 }
