@@ -2,6 +2,7 @@ package eu.openanalytics.containerproxy.spec.expression;
 
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
+import eu.openanalytics.containerproxy.model.spec.ResourceSpec;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import org.springframework.data.util.Pair;
@@ -70,20 +71,12 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return source.getPortMapping();
     }
 
-    public String getMemoryRequest() {
-        return resolve(source.getMemoryRequest());
-    }
-
-    public String getMemoryLimit() {
-        return resolve(source.getMemoryLimit());
-    }
-
-    public String getCpuRequest() {
-        return resolve(source.getCpuRequest());
-    }
-
-    public String getCpuLimit() {
-        return resolve(source.getCpuLimit());
+    @Override
+    public ResourceSpec getResources() {
+        ResourceSpec resourceSpec = new ResourceSpec();
+        source.getResources().getLimits().forEach((key, value) -> resourceSpec.getLimits().put(key, resolve(value)));
+        source.getResources().getRequests().forEach((key, value) -> resourceSpec.getRequests().put(key, resolve(value)));
+        return resourceSpec;
     }
 
     public boolean isPrivileged() {
