@@ -227,7 +227,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 .collect(Collectors.toList());
         containerGroup.getParameters().put(PARAM_CONTAINER, containers);
         SpecExpressionContext context = SpecExpressionContext.create(proxy, proxy.getSpec());
-        List<Volume> volumes = proxy.getSpec().getKubernetesVolumes().stream().map(volume -> {
+        List<Volume> volumes = proxy.getSpec().getKubernetes().getVolumes().stream().map(volume -> {
             try {
                 String volumeString = objectMapper.writeValueAsString(volume);
                 volumeString = expressionResolver.evaluateToString(volumeString, context);
@@ -306,7 +306,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     private JsonPatch readPatchFromSpec(Proxy proxy) throws JsonProcessingException {
-        String patchAsString = proxy.getSpec().getKubernetesPodPatches();
+        String patchAsString = proxy.getSpec().getKubernetes().getPodPatches();
         if (patchAsString == null) {
             return null;
         }
@@ -398,7 +398,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var context = SpecExpressionContext.create(proxy, proxy.getSpec());
 
         var result = new ArrayList<HasMetadata>();
-        for (var manifest : proxy.getSpec().getKubernetesAdditionalManifests()) {
+        for (var manifest : proxy.getSpec().getKubernetes().getAdditionalManifests()) {
             var expressionManifest = expressionResolver.evaluateToString(manifest, context);
             HasMetadata object = Serialization.unmarshal(new ByteArrayInputStream(expressionManifest.getBytes())); // used to determine whether the manifest has specified a namespace
 
