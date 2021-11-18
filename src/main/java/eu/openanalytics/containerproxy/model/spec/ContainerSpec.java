@@ -42,7 +42,7 @@ public class ContainerSpec {
     private boolean privileged;
     @Getter
     @Setter
-    private ResourceSpec resources;
+    private ResourceSpec resources = new ResourceSpec();
     @Getter
     @Setter
     private List<VolumeMount> volumeMount = new ArrayList<>();
