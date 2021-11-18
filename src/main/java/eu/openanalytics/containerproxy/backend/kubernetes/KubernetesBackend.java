@@ -404,8 +404,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
             var fullObject = kubeClient.load(new ByteArrayInputStream(expressionManifest.getBytes())).get().get(0);
             if (object.getMetadata().getNamespace() == null) {
-                // the load method (in some cases) automatically sets a namepsace when no namespace is provided
-                // therefore we overwrite this namespace with the namsepace of the pod.
+                // the load method (in some cases) automatically sets a namespace when no namespace is provided
+                // therefore we overwrite this namespace with the namespace of the pod.
                 fullObject.getMetadata().setNamespace(namespace);
             }
             result.add(fullObject);
