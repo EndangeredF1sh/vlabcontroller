@@ -213,11 +213,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
                             .withSecurityContext(security)
                             .withResources(
                                     new ResourceRequirementsBuilder()
-                                            .addToRequests("cpu", toQuantity.apply(spec.getCpuRequest()))
-                                            .addToLimits("cpu", toQuantity.apply((spec.getCpuLimit())))
-                                            .addToRequests("memory", toQuantity.apply((spec.getMemoryRequest())))
-                                            .addToLimits("memory", toQuantity.apply((spec.getMemoryLimit())))
-                                            .build()
+                                        .addToRequests(spec.getResources().getRequests().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> toQuantity.apply(v.getValue()))))
+                                        .addToLimits(spec.getResources().getLimits().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> toQuantity.apply(v.getValue()))))
+                                        .build()
                             )
                             .withEnv(envVars);
 

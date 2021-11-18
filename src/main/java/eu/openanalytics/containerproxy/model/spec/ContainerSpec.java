@@ -42,16 +42,7 @@ public class ContainerSpec {
     private boolean privileged;
     @Getter
     @Setter
-    private String memoryRequest;
-    @Getter
-    @Setter
-    private String memoryLimit;
-    @Getter
-    @Setter
-    private String cpuRequest;
-    @Getter
-    @Setter
-    private String cpuLimit;
+    private ResourceSpec resources;
     @Getter
     @Setter
     private List<VolumeMount> volumeMount = new ArrayList<>();
@@ -95,10 +86,7 @@ public class ContainerSpec {
         target.getPorts().addAll(ports);
         target.getPortMapping().putAll(portMapping);
         target.getPortMapping().putAll(ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x)));
-        target.setMemoryRequest(memoryRequest);
-        target.setMemoryLimit(memoryLimit);
-        target.setCpuRequest(cpuRequest);
-        target.setCpuLimit(cpuLimit);
+        target.setResources(resources);
         target.setPrivileged(privileged);
         target.getVolumeMount().addAll(volumeMount);
         target.getSettings().putAll(settings);
