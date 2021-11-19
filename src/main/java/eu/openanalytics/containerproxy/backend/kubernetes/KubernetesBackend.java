@@ -58,6 +58,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     private static final String PARAM_POD = "pod";
     private static final String PARAM_CONTAINER = "container";
     private static final String PARAM_SERVICE = "service";
+    private static final String PARAM_PVC = "persistentvolumeclaim";
     private static final String PARAM_NAMESPACE = "namespace";
 
     private static final String SECRET_KEY_REF = "secretKeyRef";
@@ -261,6 +262,20 @@ public class KubernetesBackend extends AbstractContainerBackend {
         Pod patchedPod = podPatcher.patchWithDebug(startupPod, patch);
         final String effectiveKubeNamespace = patchedPod.getMetadata().getNamespace(); // use the namespace of the patched Pod, in case the patch changes the namespace.
         containerGroup.getParameters().put(PARAM_NAMESPACE, effectiveKubeNamespace);
+
+        var pvcs = proxy.getSpec().getKubernetes().getPersistentVolumeClaims().stream().map(pvc -> {
+            try {
+                String pvcString = objectMapper.writeValueAsString(pvc);
+                pvcString = expressionResolver.evaluateToString(pvcString, context);
+                var expressionPVC = objectMapper.readValue(pvcString, PersistentVolumeClaim.class);
+                return kubeClient.persistentVolumeClaims().inNamespace(effectiveKubeNamespace).createOrReplace(expressionPVC);
+            } catch (Exception e) {
+                log.error(e);
+                return null;
+            }
+        }).collect(Collectors.toList());
+        containerGroup.getParameters().put(PARAM_PVC, pvcs.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+        log.debug("created {} PVCs", pvcs.stream().filter(Objects::nonNull).count());
 
         // create additional manifests -> use the effective (i.e. patched) namespace if no namespace is provided
         createAdditionalManifests(proxy, effectiveKubeNamespace);
@@ -484,6 +499,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
         if (pod != null) kubeClient.pods().inNamespace(kubeNamespace).delete(pod);
         var service = (Service) containerGroup.getParameters().get(PARAM_SERVICE);
         if (service != null) kubeClient.services().inNamespace(kubeNamespace).delete(service);
+        var pvcs = (List<PersistentVolumeClaim>) containerGroup.getParameters().get(PARAM_PVC);
+        if (!Objects.requireNonNull(pvcs).isEmpty()) kubeClient.persistentVolumeClaims().inNamespace(kubeNamespace).delete(pvcs);
 
         // delete additional manifests
         for (var fullObject : getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
