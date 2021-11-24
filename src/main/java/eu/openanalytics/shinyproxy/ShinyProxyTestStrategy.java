@@ -63,7 +63,7 @@ public class ShinyProxyTestStrategy implements IProxyTestStrategy {
 
         if (proxy.getTargets().isEmpty()) return false;
         URI targetURI = proxy.getTargets().values().iterator().next();
-
+        int failedResponseCode = -1;
         return retry(i -> {
             try {
                 if (proxy.getStatus() == ProxyStatus.Stopping || proxy.getStatus() == ProxyStatus.Stopped) return true;
@@ -72,7 +72,7 @@ public class ShinyProxyTestStrategy implements IProxyTestStrategy {
                 connection.setConnectTimeout(timeoutMs);
                 connection.setInstanceFollowRedirects(false);
                 int responseCode = connection.getResponseCode();
-                if (responseCode < 400) return true;
+                if (responseCode < 500) return true;
             } catch (Exception e) {
                 if (i > 1)
                     log.warn(String.format("Container unresponsive, trying again (%d/%d): %s", i, maxTries, targetURI));
