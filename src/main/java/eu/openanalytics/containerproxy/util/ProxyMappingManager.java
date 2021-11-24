@@ -160,7 +160,7 @@ public class ProxyMappingManager {
         URI defaultTarget = defaultTargetMappings.get(proxyId);
         String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
         URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
-
+        int[] failedResponseCode = new int[1];
         boolean targetConnected = Retrying.retry(i -> {
             try {
                 String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
@@ -177,18 +177,25 @@ public class ProxyMappingManager {
                 connection.setInstanceFollowRedirects(false);
                 int responseCode = connection.getResponseCode();
                 log.debug("received connection from {}, status code: {}", testURL, responseCode);
-                if (responseCode < 400) {
+                if (responseCode < 500) {
                     log.debug("successfully connected to target {}", testURL);
-                    return true;
+                }else{
+                    failedResponseCode[0] = responseCode;
                 }
+                return true;
+            }catch (IOException ioe) {
+                failedResponseCode[0] = 404;
+                log.debug("Trying to connect target URL ({}/{})", i, 5);
             } catch (Exception e) {
+                failedResponseCode[0] = 500;
+                log.debug(e);
                 log.debug("Trying to connect target URL ({}/{})", i, 5);
             }
             return false;
         }, 5, 2000, true);
 
         if (!targetConnected) {
-            response.sendError(404);
+            response.sendError(failedResponseCode[0]);
             return;
         }
         addMapping(proxyId, port_mapping, newTarget);
