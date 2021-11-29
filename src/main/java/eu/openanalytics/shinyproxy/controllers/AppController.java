@@ -5,9 +5,11 @@ import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.auth.IAuthenticationBackend;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
+import eu.openanalytics.containerproxy.model.spec.SubApplicationSpec;
 import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.service.UserService;
 import eu.openanalytics.containerproxy.util.ProxyMappingManager;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Lazy;
@@ -24,6 +26,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -32,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static eu.openanalytics.shinyproxy.controllers.FileBrowserController.awaitReadyHelper;
 
@@ -50,7 +54,7 @@ public class AppController extends BaseController {
 
     @RequestMapping(value = "/app/**", method = RequestMethod.GET)
     public String app(ModelMap map, HttpServletRequest request,
-                      @ModelAttribute("s") String subDomain,
+                      @ModelAttribute("s") String innerURI,
                       @ModelAttribute("md") String markdownEncodedUrl) {
         prepareMap(map, request);
 
@@ -67,12 +71,11 @@ public class AppController extends BaseController {
         map.put("appTitle", getAppTitle(request));
         String baseDomain = environment.getProperty("proxy.domain");
         map.put("baseDomain", baseDomain);
-        if (!Strings.isNullOrEmpty(subDomain)) {
-            subDomain = new String(Base64.getDecoder().decode(subDomain), StandardCharsets.UTF_8);
-            String URL = "https://" + (subDomain.endsWith(".") ? subDomain : subDomain + ".") + baseDomain;
+        if (!Strings.isNullOrEmpty(innerURI)) {
+            innerURI = new String(Base64.getDecoder().decode(innerURI), StandardCharsets.UTF_8);
             map.put("subDomainMode", true);
-            map.put("iframeURL", URL);
-            map.put("container", (proxy == null) ? "" : URL);
+            map.put("iframeURL", innerURI);
+            map.put("container", (proxy == null) ? "" : innerURI);
         } else {
             map.put("container", (proxy == null) ? "" : buildContainerPath(request));
         }
@@ -165,13 +168,23 @@ public class AppController extends BaseController {
                                         RedirectAttributes redirectAttributes,
                                         @ModelAttribute("md") String markdownUrl) {
         try {
-            String subDomain = request.getServletPath().substring("/redirect/".length());
+            String[] servletPath = request.getServletPath().substring("/redirect/".length()).split("/", -1);
+            String subDomain = servletPath[0];
+            String path = servletPath[1];
+            String baseDomain = environment.getProperty("proxy.domain");
             String[] args = subDomain.split("--");
             String appID = args[args.length - 2];
+            ProxySpec spec = proxyService.getProxySpec(appID);
+            SubApplicationSpec subApplicationSpec = spec.getSubApps().stream().filter(p -> p.getSubDomain().equals(subDomain)).collect(Collectors.toList()).get(0);
+            URIBuilder innerURI = new URIBuilder();
+            innerURI.setScheme("https");
+            innerURI.setHost(subDomain + "." + baseDomain);
+            innerURI.setPath(path);
+            subApplicationSpec.getParameters().forEach(innerURI::setParameter);
             redirectAttributes.addAttribute("md", markdownUrl);
-            redirectAttributes.addAttribute("s", Base64.getEncoder().encodeToString(subDomain.getBytes(StandardCharsets.UTF_8)));
+            redirectAttributes.addAttribute("s", Base64.getEncoder().encodeToString(innerURI.build().toString().getBytes(StandardCharsets.UTF_8)));
             return "redirect:/app/" + appID;
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (ArrayIndexOutOfBoundsException | URISyntaxException e) {
             map.put("status", 404);
             return "error";
         }
