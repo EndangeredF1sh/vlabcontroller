@@ -5,7 +5,7 @@ import eu.openanalytics.containerproxy.ContainerProxyException;
 import eu.openanalytics.containerproxy.auth.IAuthenticationBackend;
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
 import eu.openanalytics.containerproxy.model.spec.ProxySpec;
-import eu.openanalytics.containerproxy.model.spec.SubApplicationSpec;
+import eu.openanalytics.containerproxy.model.spec.EntryPointSpec;
 import eu.openanalytics.containerproxy.service.ProxyService;
 import eu.openanalytics.containerproxy.service.UserService;
 import eu.openanalytics.containerproxy.util.ProxyMappingManager;
@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -175,12 +176,16 @@ public class AppController extends BaseController {
             String[] args = subDomain.split("--");
             String appID = args[args.length - 2];
             ProxySpec spec = proxyService.getProxySpec(appID);
-            SubApplicationSpec subApplicationSpec = spec.getSubApps().stream().filter(p -> p.getSubDomain().equals(subDomain)).collect(Collectors.toList()).get(0);
+
+            @SuppressWarnings("unchecked")
+            List<EntryPointSpec> apps = (List<EntryPointSpec>) spec.getSettings().get("entrypoint");
+
+            EntryPointSpec entryPointSpec = apps.stream().filter(p -> args[0].equals(Integer.toString(p.getPort()))).collect(Collectors.toList()).get(0);
             URIBuilder innerURI = new URIBuilder();
             innerURI.setScheme("https");
             innerURI.setHost(subDomain + "." + baseDomain);
             innerURI.setPath(path);
-            subApplicationSpec.getParameters().forEach(innerURI::setParameter);
+            entryPointSpec.getParameters().forEach(innerURI::setParameter);
             redirectAttributes.addAttribute("md", markdownUrl);
             redirectAttributes.addAttribute("s", Base64.getEncoder().encodeToString(innerURI.build().toString().getBytes(StandardCharsets.UTF_8)));
             return "redirect:/app/" + appID;

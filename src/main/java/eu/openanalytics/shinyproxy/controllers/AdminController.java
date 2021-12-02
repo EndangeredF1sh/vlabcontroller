@@ -63,7 +63,6 @@ public class AdminController extends BaseController {
         map.put("proxies", proxies);
         map.put("proxyUptimes", proxyUptimes);
         map.put("lastActive", lastActive);
-        map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
 
         return "admin";
     }

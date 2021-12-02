@@ -33,7 +33,7 @@ public class ContainerSpec {
     private List<String> dns = new ArrayList<>();
     @Getter
     @Setter
-    private List<Integer> ports = new ArrayList<>();
+    private List<EntryPointSpec> entryPoints = new ArrayList<>();
     @Getter
     @Setter
     private Map<String, Integer> portMapping = new HashMap<>();
@@ -83,9 +83,9 @@ public class ContainerSpec {
         target.setNetwork(network);
         target.getNetworkConnections().addAll(networkConnections);
         target.getDns().addAll(dns);
-        target.getPorts().addAll(ports);
+        target.getEntryPoints().addAll(entryPoints);
         target.getPortMapping().putAll(portMapping);
-        target.getPortMapping().putAll(ports.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x), x -> x)));
+        target.getPortMapping().putAll(entryPoints.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x.getPort()), EntryPointSpec::getPort)));
         target.setResources(resources);
         target.setPrivileged(privileged);
         target.getVolumeMount().addAll(volumeMount);

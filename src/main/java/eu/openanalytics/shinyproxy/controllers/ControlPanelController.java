@@ -43,7 +43,6 @@ public class ControlPanelController extends BaseController {
         map.put("containerLimit", containerLimit);
         map.put("proxies", proxies);
         map.put("proxyUptimes", proxyUptimes);
-        map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
 
         return "panel";
     }
