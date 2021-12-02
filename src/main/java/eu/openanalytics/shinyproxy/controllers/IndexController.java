@@ -42,7 +42,6 @@ public class IndexController extends BaseController {
             }
         }
         map.put("displayAppLogos", displayAppLogos);
-        map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
         return "index";
     }
 }

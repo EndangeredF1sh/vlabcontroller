@@ -1,6 +1,7 @@
 package eu.openanalytics.containerproxy.spec.expression;
 
 import eu.openanalytics.containerproxy.model.runtime.Proxy;
+import eu.openanalytics.containerproxy.model.spec.EntryPointSpec;
 import eu.openanalytics.containerproxy.model.spec.ContainerSpec;
 import eu.openanalytics.containerproxy.model.spec.ResourceSpec;
 import io.fabric8.kubernetes.api.model.VolumeMount;
@@ -63,8 +64,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return resolve(source.getDns());
     }
 
-    public List<Integer> getPorts() {
-        return source.getPorts();
+    public List<EntryPointSpec> getEntryPoints() {
+        return source.getEntryPoints();
     }
 
     public Map<String, Integer> getPortMapping() {

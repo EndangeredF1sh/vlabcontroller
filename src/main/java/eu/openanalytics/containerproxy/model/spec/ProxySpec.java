@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ProxySpec {
     @Getter
@@ -26,7 +27,6 @@ public class ProxySpec {
     @Setter
     private List<String> accessGroups = new ArrayList<>();
     @Getter
-    @Setter
     private List<ContainerSpec> containerSpecs = new ArrayList<>();
     @Getter
     @Setter
@@ -35,17 +35,19 @@ public class ProxySpec {
     @Setter
     private Map<String, String> labels = new HashMap<>();
     @Getter
-    @Setter
-    private Map<String, String> settings = new HashMap<>();
+    private Map<String, Object> settings = new HashMap<>();
     @Getter
     @Setter
     private ProxySpecKubernetes kubernetes = new ProxySpecKubernetes();
     @Getter
     @Setter
-    private List<SubApplicationSpec> subApps = new ArrayList<>();
-    @Getter
-    @Setter
     private String defaultTutorialLink;
+
+    public void setContainerSpecs(List<ContainerSpec> containerSpecs) {
+        this.containerSpecs = containerSpecs;
+        var entryPoints = containerSpecs.stream().flatMap(x -> x.getEntryPoints().stream()).collect(Collectors.toList());
+        settings.put("entrypoint", entryPoints);
+    }
 
     public void copy(ProxySpec target) {
         target.setId(id);
@@ -74,8 +76,6 @@ public class ProxySpec {
         ProxySpecKubernetes proxySpecKubernetesCopy = new ProxySpecKubernetes();
         kubernetes.copy(proxySpecKubernetesCopy);
         target.setKubernetes(proxySpecKubernetesCopy);
-
-        target.getSubApps().addAll(subApps);
     }
 
 }
