@@ -120,7 +120,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         containerGroup.setSpecs(specs);
         containerGroup.setId(UUID.randomUUID().toString());
 
-        var identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+        var identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
         var identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
 
         var kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
@@ -305,7 +305,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     private void createAdditionalManifests(Proxy proxy, String namespace) {
         for (HasMetadata fullObject : getAdditionManifestsAsObjects(proxy, namespace)) {
             if (kubeClient.resource(fullObject).fromServer().get() == null) {
-                String identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+                String identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
                 String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
                 ObjectMeta cache = fullObject.getMetadata();
                 Map<String, String> labels = cache.getLabels();
@@ -534,7 +534,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     public void cleanBeforeStart() {
-        var identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+        var identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
         var identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
         var orphanPods = kubeClient.pods().inAnyNamespace().withLabel(identifierLabel, identifierValue).list();
         if (orphanPods != null) {
@@ -563,7 +563,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
     }
 
     public PodList getFailedAndUnknownPods() {
-        var identifierLabel = environment.getProperty("proxy.identifier-label", "openanalytics.eu/sp-identifier");
+        var identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
         var identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
         return kubeClient.pods().inAnyNamespace()
                 .withLabel(identifierLabel, identifierValue)
@@ -581,7 +581,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 var failedPods = getFailedAndUnknownPods();
                 if (failedPods != null && !failedPods.getItems().isEmpty()) {
                     for (var pod : failedPods.getItems()) {
-                        var proxyId = pod.getMetadata().getLabels().get("openanalytics.eu/sp-proxy-id");
+                        var proxyId = pod.getMetadata().getLabels().get("comp.polyu.edu.hk/vl-proxy-id");
                         proxyService.stopProxy(proxyService.getProxy(proxyId), true, true);
                         log.error("Cleaned error proxy {}", proxyId);
                     }

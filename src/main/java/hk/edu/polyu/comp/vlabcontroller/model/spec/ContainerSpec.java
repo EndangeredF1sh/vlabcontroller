@@ -55,7 +55,7 @@ public class ContainerSpec {
      * These should not be included in API responses.
      * <p>
      * The boolean in the pair indicates whether the value is "safe". Safe values are calculated by
-     * ShinyProxy itself and contain no user data.
+     * VLabController itself and contain no user data.
      * In practice, safe labels are saved as Kubernetes labels and non-safe labels are saved as
      * Kubernetes annotations.
      */

@@ -61,7 +61,7 @@ public class ProxySpec {
         for (ContainerSpec spec : containerSpecs) {
             ContainerSpec copy = new ContainerSpec();
             spec.copy(copy);
-            copy.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
+            copy.getEnv().put("PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
             target.getContainerSpecs().add(copy);
         }
 

@@ -53,8 +53,8 @@ public class OpenIDAuthenticationBackend implements IAuthenticationBackend {
 
     public static final String NAME = "openid";
 
-    private static final String REG_ID = "shinyproxy";
-    private static final String ENV_TOKEN_NAME = "SHINYPROXY_OIDC_ACCESS_TOKEN";
+    private static final String REG_ID = "vlab";
+    private static final String ENV_TOKEN_NAME = "VLAB_OIDC_ACCESS_TOKEN";
 
     private final Logger log = LogManager.getLogger(OpenIDAuthenticationBackend.class);
 

@@ -49,18 +49,17 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected static final String DEFAULT_TARGET_PROTOCOL = "http";
 
     //TODO rename vars?
-    protected static final String ENV_VAR_USER_NAME = "SHINYPROXY_USERNAME";
-    protected static final String ENV_VAR_USER_GROUPS = "SHINYPROXY_USERGROUPS";
-    protected static final String ENV_VAR_REALM_ID = "SHINYPROXY_REALM_ID";
+    protected static final String ENV_VAR_USER_NAME = "VLAB_USERNAME";
+    protected static final String ENV_VAR_USER_GROUPS = "VLAB_USERGROUPS";
+    protected static final String ENV_VAR_REALM_ID = "VLAB_REALM_ID";
 
-    protected static final String RUNTIME_LABEL_PROXY_ID = "openanalytics.eu/sp-proxy-id";
-    protected static final String RUNTIME_LABEL_USER_ID = "openanalytics.eu/sp-user-id";
-    protected static final String RUNTIME_LABEL_USER_GROUPS = "openanalytics.eu/sp-user-groups";
-    protected static final String RUNTIME_LABEL_REALM_ID = "openanalytics.eu/sp-realm-id";
-    protected static final String RUNTIME_LABEL_PROXY_SPEC_ID = "openanalytics.eu/sp-spec-id";
-    protected static final String RUNTIME_LABEL_CREATED_TIMESTAMP = "openanalytics.eu/sp-proxy-created-timestamp";
-    protected static final String RUNTIME_LABEL_PROXIED_APP = "openanalytics.eu/sp-proxied-app";
-    protected static final String RUNTIME_LABEL_INSTANCE = "openanalytics.eu/sp-instance";
+    protected static final String RUNTIME_LABEL_PROXY_ID = "comp.polyu.edu.hk/vl-proxy-id";
+    protected static final String RUNTIME_LABEL_USER_ID = "comp.polyu.edu.hk/vl-user-id";
+    protected static final String RUNTIME_LABEL_USER_GROUPS = "comp.polyu.edu.hk/vl-user-groups";
+    protected static final String RUNTIME_LABEL_PROXY_SPEC_ID = "comp.polyu.edu.hk/vl-spec-id";
+    protected static final String RUNTIME_LABEL_CREATED_TIMESTAMP = "comp.polyu.edu.hk/vl-proxy-created-timestamp";
+    protected static final String RUNTIME_LABEL_PROXIED_APP = "comp.polyu.edu.hk/vl-proxied-app";
+    protected static final String RUNTIME_LABEL_INSTANCE = "comp.polyu.edu.hk/vl-instance";
 
     protected final Logger log = LogManager.getLogger(getClass());
     @Inject

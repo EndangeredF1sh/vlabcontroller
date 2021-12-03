@@ -15,8 +15,8 @@ import java.net.URL;
 import java.util.function.IntPredicate;
 
 /**
- * This component tests the responsiveness of Shiny containers by making an HTTP GET request to the container's published port (default 3838).
- * If this request does not receive a 200 (OK) response within a configured time limit, the container is considered to be unresponsive.
+ * This component tests the responsiveness of containers by making an HTTP GET request to the container's published port (default 3838).
+ * If this request does not receive non-error (5xx) response within a configured time limit, the container is considered to be unresponsive.
  */
 @Component
 @Primary
