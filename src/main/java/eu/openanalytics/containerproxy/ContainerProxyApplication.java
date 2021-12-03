@@ -126,6 +126,8 @@ public class ContainerProxyApplication {
         // ====================
 
         app.setDefaultProperties(properties);
+        // See: https://github.com/keycloak/keycloak/pull/7053
+        System.setProperty("jdk.serialSetFilterAfterRead", "true");
     }
 
     @PostConstruct
