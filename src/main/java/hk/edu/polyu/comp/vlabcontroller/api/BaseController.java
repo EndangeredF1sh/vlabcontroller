@@ -17,7 +17,7 @@ public class BaseController {
     private Environment environment;
 
     protected void prepareMap(ModelMap map) {
-        map.put("title", environment.getProperty("proxy.title", "ShinyProxy"));
+        map.put("title", environment.getProperty("proxy.title", "VLabController"));
     }
 
     @StandardException

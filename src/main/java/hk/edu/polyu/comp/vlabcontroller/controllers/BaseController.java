@@ -96,7 +96,7 @@ public abstract class BaseController {
     }
 
     protected void prepareMap(ModelMap map, HttpServletRequest request) {
-        map.put("title", environment.getProperty("proxy.title", "ShinyProxy"));
+        map.put("title", environment.getProperty("proxy.title", "VLabController"));
         map.put("logo", resolveImageURI(environment.getProperty("proxy.logo-url")));
         map.put("instance", environment.getProperty("proxy.identifier-value", "default-identifier"));
         map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());

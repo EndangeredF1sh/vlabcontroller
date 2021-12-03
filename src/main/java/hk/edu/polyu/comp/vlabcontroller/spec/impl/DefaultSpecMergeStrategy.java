@@ -40,7 +40,7 @@ public class DefaultSpecMergeStrategy implements IProxySpecMergeStrategy {
             var id = UUID.randomUUID().toString();
             finalSpec.setId(id);
             for (var containerSpec : finalSpec.getContainerSpecs()) {
-                containerSpec.getEnv().put("SHINYPROXY_PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
+                containerSpec.getEnv().put("PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
             }
         }
         return finalSpec;

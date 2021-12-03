@@ -15,7 +15,7 @@ import java.sql.Timestamp;
  * # MonetDB, Postgresql, MySQL/MariaDB usage-stats-url:
  * jdbc:monetdb://localhost:50000/usage_stats usage-stats-url:
  * jdbc:postgresql://localhost/postgres usage-stats-url:
- * jdbc:mysql://localhost/shinyproxy
+ * jdbc:mysql://localhost/usage-stats
  * <p>
  * Assumed table layout:
  * <p>
@@ -24,7 +24,7 @@ import java.sql.Timestamp;
  * <p>
  * <p>
  * # MS SQL Server usage-stats-url:
- * jdbc:sqlserver://localhost;databaseName=shinyproxy
+ * jdbc:sqlserver://localhost;databaseName=usage-stats
  * <p>
  * Assumed table layout:
  * <p>

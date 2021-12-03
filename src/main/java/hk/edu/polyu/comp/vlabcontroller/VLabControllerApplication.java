@@ -87,7 +87,7 @@ public class VLabControllerApplication {
         properties.put("spring.session.redis.flush-mode", "IMMEDIATE");
 
         // disable multi-part handling by Spring. We don't need this anywhere in the application.
-        // When enabled this will cause problems when proxying file-uploads to the shiny apps.
+        // When enabled this will cause problems when proxying file-uploads to apps.
         properties.put("spring.servlet.multipart.enabled", "false");
 
         // disable logging of requests, since this reads part of the requests and therefore undertow is unable to correctly handle those requests
@@ -133,7 +133,7 @@ public class VLabControllerApplication {
     @PostConstruct
     public void init() {
         if (environment.getProperty("server.use-forward-headers") != null) {
-            log.warn("WARNING: Using server.use-forward-headers will not work in this ShinyProxy release, you need to change your configuration to use another property. See https://shinyproxy.io/documentation/security/#forward-headers on how to change your configuration.");
+            log.warn("WARNING: Using server.use-forward-headers will not work in this VLabController release, you need to change your configuration to use another property. See https://shinyproxy.io/documentation/security/#forward-headers on how to change your configuration.");
         }
 
         String sameSiteCookie = environment.getProperty("proxy.same-site-cookie", "Lax");

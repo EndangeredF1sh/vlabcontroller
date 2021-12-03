@@ -16,7 +16,7 @@ import java.util.Optional;
 
 /**
  * E.g.:
- * usage-stats-url: http://localhost:8086/write?db=shinyproxy_usagestats
+ * usage-stats-url: http://localhost:8086/write?db=usagestats
  */
 public class InfluxDBCollector extends AbstractDbCollector {
 
