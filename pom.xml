@@ -335,11 +335,11 @@
                         </auth>
                     </to>
                     <container>
-                        <appRoot>/opt/shinyproxy</appRoot>
-                        <workingDirectory>/opt/shinyproxy</workingDirectory>
+                        <appRoot>/opt/vlab-controller</appRoot>
+                        <workingDirectory>/opt/vlab-controller</workingDirectory>
                         <environment>
                             <SHINY_USER>shinyproxy</SHINY_USER>
-                            <PROXY_TEMPLATEPATH>/opt/shinyproxy/resources/templates</PROXY_TEMPLATEPATH>
+                            <PROXY_TEMPLATEPATH>/opt/vlab-controller/resources/templates</PROXY_TEMPLATEPATH>
                             <SERVER_ERROR_WHITELABEL_ENABLED>false</SERVER_ERROR_WHITELABEL_ENABLED>
                             <TZ>Asia/Hong_Kong</TZ>
                         </environment>
@@ -350,7 +350,7 @@
                         <user>shinyproxy:shinyproxy</user>
                         <args>
                             <arg>--spring.jmx.enabled=false</arg>
-                            <arg>--spring.config.location=/etc/shinyproxy/config/application.yml</arg>
+                            <arg>--spring.config.location=/etc/vlab-controller/config/application.yml</arg>
                         </args>
                         <jvmFlags>
                             <jvmFlag>--illegal-access=permit</jvmFlag>
@@ -360,7 +360,7 @@
                         <paths>
                             <path>
                                 <from>resources/templates</from>
-                                <into>/opt/shinyproxy/resources/templates</into>
+                                <into>/opt/vlab-controller/resources/templates</into>
                             </path>
                         </paths>
                     </extraDirectories>
