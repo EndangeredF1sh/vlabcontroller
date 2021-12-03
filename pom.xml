@@ -345,6 +345,7 @@
                         </environment>
                         <labels>
                             <maintainer>Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com></maintainer>
+                            <maintainer>Fan Chun Yin &lt;stevefan1999@gmail.com&gt;</maintainer>
                         </labels>
                         <user>shinyproxy:shinyproxy</user>
                         <args>
