@@ -268,6 +268,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 String pvcString = objectMapper.writeValueAsString(pvc);
                 pvcString = expressionResolver.evaluateToString(pvcString, context);
                 var expressionPVC = objectMapper.readValue(pvcString, PersistentVolumeClaim.class);
+                var labelCache = expressionPVC.getMetadata().getLabels();
+                if (labelCache == null) {
+                    labelCache = new HashMap<>();
+                }
+                labelCache.putAll(labels);
+                labelCache.put(identifierLabel, identifierValue);
+                labelCache.put("app", containerGroup.getId());
+                expressionPVC.getMetadata().setLabels(labelCache);
                 return kubeClient.persistentVolumeClaims().inNamespace(effectiveKubeNamespace).createOrReplace(expressionPVC);
             } catch (Exception e) {
                 log.error(e);
