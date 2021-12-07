@@ -458,43 +458,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void doStopProxy(Proxy proxy) throws Exception {
-        // wait a bit to make sure there will be a pod to remove
-        // prevent orphan pods issue (start an app and sign out quickly)
-        var retry = 20;
-        var interval = 3000;
-        var responded = false;
+    protected void doStopProxy(Proxy proxy) throws VLabControllerException {
         var containerGroup = proxy.getContainerGroup();
-        for (var i = 0; i < retry; i++) {
-            var containers = (List<Container>) containerGroup.getParameters().get(PARAM_CONTAINER);
-            if (containers.isEmpty()) {
-                log.debug("Proxy pod unresponsive, retrying ({}/{})", i + 1, retry);
-                Thread.sleep(interval);
-            } else {
-                responded = true;
-                log.debug("Pod responded, removing...");
-                break;
-            }
-        }
-        if (!responded) {
-            var kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
-            var namespacePrefix = getProperty(PROPERTY_NAMESPACE_PREFIX);
-            if (Boolean.parseBoolean(getProperty(PROPERTY_UID_NAMESPACE, "false"))) {
-                kubeNamespace = Strings.isNullOrEmpty(namespacePrefix) ? proxy.getUserId() : namespacePrefix + "-" + proxy.getUserId();
-            }
-            // we have to delete additional manifests and services even though we can't find pod
-            for (var fullObject : getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
-                kubeClient.resource(fullObject).delete();
-            }
-            kubeClient.services().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
-            throw new VLabControllerException("Failed to stop container: no pod was founded");
-        }
-
         var kubeNamespace = containerGroup.getParameters().get(PARAM_NAMESPACE).toString();
         if (kubeNamespace == null) {
-            kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
+            throw new VLabControllerException("Failed to stop proxy: Cannot get proxy's namespace");
         }
-
         var pod = (Pod) containerGroup.getParameters().get(PARAM_POD);
         if (pod != null) kubeClient.pods().inNamespace(kubeNamespace).delete(pod);
         var service = (Service) containerGroup.getParameters().get(PARAM_SERVICE);
