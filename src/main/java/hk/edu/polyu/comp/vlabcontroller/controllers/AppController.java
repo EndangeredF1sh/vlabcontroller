@@ -25,6 +25,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -128,7 +129,7 @@ public class AppController extends BaseController {
     }
 
     @RequestMapping(value = "/app_direct/**")
-    public void appDirect(HttpServletRequest request, HttpServletResponse response) {
+    public void appDirect(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Proxy proxy = findUserProxy(request);
         awaitReady(proxy);
 
@@ -159,8 +160,8 @@ public class AppController extends BaseController {
                 mappingManager.dispatchAsync(mapping + subPath, request, response);
             }
         } catch (Exception e) {
-            response.setStatus(404);
-            log.error("Error routing proxy request: {}", request.getRequestURI());
+            response.sendError(404);
+            log.debug("Error routing proxy request: {}", request.getRequestURI());
         }
     }
 
