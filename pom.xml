@@ -338,23 +338,21 @@
                         <appRoot>/opt/vlab-controller</appRoot>
                         <workingDirectory>/opt/vlab-controller</workingDirectory>
                         <environment>
-                            <SHINY_USER>shinyproxy</SHINY_USER>
+                            <VLAB_USER>vlab</VLAB_USER>
                             <PROXY_TEMPLATEPATH>/opt/vlab-controller/resources/templates</PROXY_TEMPLATEPATH>
                             <SERVER_ERROR_WHITELABEL_ENABLED>false</SERVER_ERROR_WHITELABEL_ENABLED>
                             <TZ>Asia/Hong_Kong</TZ>
                         </environment>
                         <labels>
-                            <maintainer>Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com></maintainer>
-                            <maintainer>Fan Chun Yin &lt;stevefan1999@gmail.com&gt;</maintainer>
+                            <maintainer>
+                                Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com&gt;, Fan Chun Yin &lt;stevefan1999@gmail.com&gt;
+                            </maintainer>
                         </labels>
-                        <user>shinyproxy:shinyproxy</user>
+                        <user>vlab:vlab</user>
                         <args>
                             <arg>--spring.jmx.enabled=false</arg>
                             <arg>--spring.config.location=/etc/vlab-controller/config/application.yml</arg>
                         </args>
-                        <jvmFlags>
-                            <jvmFlag>--illegal-access=permit</jvmFlag>
-                        </jvmFlags>
                     </container>
                     <extraDirectories>
                         <paths>
