@@ -148,7 +148,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         var objectMetaBuilder = new ObjectMetaBuilder()
                 .withNamespace(kubeNamespace)
-                .withName("sp-pod-" + containerGroup.getId())
+                .withName("vl-pod-" + containerGroup.getId())
                 .addToLabels(labels)
                 .addToLabels(identifierLabel, identifierValue)
                 .addToLabels("app", containerGroup.getId());
@@ -204,7 +204,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     var containerBuilder = new ContainerBuilder()
                             .withImage(spec.getImage())
                             .withCommand(spec.getCmd())
-                            .withName(String.format("sp-container-%s", UUID.randomUUID()))
+                            .withName(String.format("vl-container-%s", UUID.randomUUID()))
                             .withPorts(
                                     spec.getPortMapping().values().stream()
                                             .map(p -> new ContainerPortBuilder().withContainerPort(p).build())
@@ -390,7 +390,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     .withApiVersion(apiVersion)
                     .withKind("Service")
                     .withNewMetadata()
-                    .withName("sp-service-" + containerGroup.getId())
+                    .withName("vl-service-" + containerGroup.getId())
                     .addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
                     .addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
                     .addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
@@ -497,7 +497,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 if (kubeNamespace == null) {
                     kubeNamespace = getProperty(PROPERTY_NAMESPACE, DEFAULT_NAMESPACE);
                 }
-                var watcher = kubeClient.pods().inNamespace(kubeNamespace).withName("sp-pod-" + containerGroup.getId()).watchLog();
+                var watcher = kubeClient.pods().inNamespace(kubeNamespace).withName("vl-pod-" + containerGroup.getId()).watchLog();
                 IOUtils.copy(watcher.getOutput(), stdOut);
             } catch (IOException e) {
                 log.error("Error while attaching to container output", e);
