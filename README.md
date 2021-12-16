@@ -1,24 +1,6 @@
-<pre>
-       ____            _        _                 ____
-      / ___|___  _ __ | |_ __ _(_)_ __   ___ _ __|  _ \ _ __ _____  ___   _
-     | |   / _ \| '_ \| __/ _` | | '_ \ / _ \ '__| |_) | '__/ _ \ \/ / | | |
-     | |__| (_) | | | | || (_| | | | | |  __/ |  |  __/| | | (_) >  <| |_| |
-      \____\___/|_| |_|\__\__,_|_|_| |_|\___|_|  |_|   |_|  \___/_/\_\\__, |
-                                                                       |___/
+# VLabController
 
-</pre>
-
-[![Build Status](https://travis-ci.org/openanalytics/containerproxy.svg?branch=master)](https://travis-ci.org/openanalytics/containerproxy)
-
-# ContainerProxy
-
-ContainerProxy is an application that launches and manages containers for users, to perform specific tasks.
-
-It is the engine that powers a.o. [ShinyProxy](https://shinyproxy.io) but can be used for any application that needs to manage HTTP proxy routes into Docker containers.
-
-Learn more at https://containerproxy.io (in progress)
-
-#### (c) Copyright Open Analytics NV, 2017-2021 - Apache License 2.0
+A portal to all the education applications implemented with web technologies and Kubernetes.
 
 ## Building from source
 
@@ -30,6 +12,10 @@ mvn -U clean install -DskipTests
 
 The build will result in a single `.jar` file that is made available in the `target` directory.
 
-## Further information
+## Credits
 
-https://containerproxy.io (in progress)
+VLabController is based on open-source projects: [ContainerProxy](https://github.com/openanalytics/containerproxy) and [ShinyProxy](https://github.com/openanalytics/shinyproxy), licensed under [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+## License
+
+Please refer to this repo's license file.
