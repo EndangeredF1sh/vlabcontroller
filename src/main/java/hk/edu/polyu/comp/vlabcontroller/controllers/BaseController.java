@@ -6,6 +6,7 @@ import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
 import hk.edu.polyu.comp.vlabcontroller.service.ProxyService;
 import hk.edu.polyu.comp.vlabcontroller.service.UserService;
 import hk.edu.polyu.comp.vlabcontroller.util.SessionHelper;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Lazy;
@@ -19,13 +20,11 @@ import org.springframework.util.StreamUtils;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.Principal;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -100,6 +99,22 @@ public abstract class BaseController {
         map.put("logo", resolveImageURI(environment.getProperty("proxy.logo-url")));
         map.put("instance", environment.getProperty("proxy.identifier-value", "default-identifier"));
         map.put("enableSubDomainMode", !environment.getProperty("proxy.domain", "").isEmpty());
+        String authURL = environment.getProperty("proxy.keycloak.auth-server-url", "");
+        String realm = environment.getProperty("proxy.keycloak.realm", "");
+        String accountManagementUrl = null;
+        try {
+            URIBuilder uriBuilder = new URIBuilder(authURL);
+            List<String> pathSegments = uriBuilder.getPathSegments();
+            pathSegments.removeIf(String::isBlank);
+            pathSegments.add("realms");
+            pathSegments.add(realm);
+            pathSegments.add("account");
+            uriBuilder.setPathSegments(pathSegments);
+            accountManagementUrl = uriBuilder.build().toString();
+        } catch (URISyntaxException e) {
+            logger.error("Keycloak URL syntax error");
+        }
+        map.put("accountManagementUrl", accountManagementUrl);
 
         String hideNavBarParam = request.getParameter("sp_hide_navbar");
         if (Objects.equals(hideNavBarParam, "true")) {

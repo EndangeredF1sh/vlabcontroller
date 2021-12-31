@@ -5,7 +5,7 @@
 
     <groupId>hk.edu.polyu.comp.vl</groupId>
     <artifactId>vlabcontroller</artifactId>
-    <version>1.0</version>
+    <version>1.0.1</version>
 
     <name>VLabController</name>
     <packaging>jar</packaging>
@@ -275,6 +275,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
