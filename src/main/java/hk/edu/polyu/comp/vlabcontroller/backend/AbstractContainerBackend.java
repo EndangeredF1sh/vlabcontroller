@@ -48,10 +48,8 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
 
     protected static final String DEFAULT_TARGET_PROTOCOL = "http";
 
-    //TODO rename vars?
     protected static final String ENV_VAR_USER_NAME = "VLAB_USERNAME";
     protected static final String ENV_VAR_USER_GROUPS = "VLAB_USERGROUPS";
-    protected static final String ENV_VAR_REALM_ID = "VLAB_REALM_ID";
 
     protected static final String RUNTIME_LABEL_PROXY_ID = "comp.polyu.edu.hk/vl-proxy-id";
     protected static final String RUNTIME_LABEL_USER_ID = "comp.polyu.edu.hk/vl-user-id";
@@ -206,11 +204,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
 
         String[] groups = userService.getGroups(userService.getCurrentAuth());
         env.add(String.format("%s=%s", ENV_VAR_USER_GROUPS, String.join(",", groups)));
-
-        String realmId = environment.getProperty("proxy.realm-id");
-        if (realmId != null) {
-            env.add(String.format("%s=%s", ENV_VAR_REALM_ID, realmId));
-        }
 
         String envFile = containerSpec.getEnvFile();
         if (envFile != null && Files.isRegularFile(Paths.get(envFile))) {

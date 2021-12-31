@@ -21,5 +21,8 @@ public class EntryPointSpec {
     private String path = "";
     @Getter
     @Setter
+    private boolean disableSubdomain = false;
+    @Getter
+    @Setter
     private Map<String, String> parameters = new HashMap<>();
 }

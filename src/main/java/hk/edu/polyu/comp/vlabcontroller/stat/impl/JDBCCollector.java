@@ -47,6 +47,8 @@ public class JDBCCollector extends AbstractDbCollector {
         ds.setJdbcUrl(baseURL);
         ds.setUsername(username);
         ds.setPassword(password);
+        ds.addDataSourceProperty("useJDBCCompliantTimezoneShift", "true");
+        ds.addDataSourceProperty("serverTimezone", "UTC");
 
         Long connectionTimeout = environment.getProperty("proxy.usage-stats-hikari.connection-timeout", Long.class);
         if (connectionTimeout != null) {

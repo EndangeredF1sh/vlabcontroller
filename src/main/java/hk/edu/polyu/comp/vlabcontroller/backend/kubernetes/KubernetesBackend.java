@@ -142,27 +142,28 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         log.debug("imagePullSecrets: {}", imagePullSecrets);
 
-        var labels = proxy.getSpec().getLabels();
+        var specLabels = proxy.getSpec().getLabels();
 
-        log.debug("all labels (map): {}", labels);
+        log.debug("all labels (map): {}", specLabels);
+
+        // Handle runtime labels
+        var runtimeLabels = specs.stream()
+                .flatMap(x -> x.getRuntimeLabels().entrySet().stream())
+                .filter(p -> p.getValue().getFirst())
+                .collect(Collectors.toMap(Map.Entry::getKey, m -> m.getValue().getSecond(), (v1, v2) -> v2));
+
+        var runtimeAnnotations = specs.stream()
+                .flatMap(x -> x.getRuntimeLabels().entrySet().stream())
+                .filter(p -> !p.getValue().getFirst())
+                .collect(Collectors.toMap(Map.Entry::getKey, m -> m.getValue().getSecond(), (v1, v2) -> v2));
 
         var objectMetaBuilder = new ObjectMetaBuilder()
                 .withNamespace(kubeNamespace)
                 .withName("vl-pod-" + containerGroup.getId())
-                .addToLabels(labels)
+                .addToLabels(specLabels)
                 .addToLabels(identifierLabel, identifierValue)
-                .addToLabels("app", containerGroup.getId());
-
-        // Handle runtime labels
-        specs.stream()
-                .flatMap(x -> x.getRuntimeLabels().entrySet().stream())
-                .forEach(runtimeLabel -> {
-                    if (runtimeLabel.getValue().getFirst()) {
-                        objectMetaBuilder.addToLabels(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
-                    } else {
-                        objectMetaBuilder.addToAnnotations(runtimeLabel.getKey(), runtimeLabel.getValue().getSecond());
-                    }
-                });
+                .addToLabels(runtimeLabels)
+                .addToAnnotations(runtimeAnnotations);
 
         var podBuilder = new PodBuilder()
             .withApiVersion(apiVersion)
@@ -272,9 +273,9 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 if (labelCache == null) {
                     labelCache = new HashMap<>();
                 }
-                labelCache.putAll(labels);
+                labelCache.putAll(specLabels);
+                labelCache.putAll(runtimeLabels);
                 labelCache.put(identifierLabel, identifierValue);
-                labelCache.put("app", containerGroup.getId());
                 expressionPVC.getMetadata().setLabels(labelCache);
                 return kubeClient.persistentVolumeClaims().inNamespace(effectiveKubeNamespace).createOrReplace(expressionPVC);
             } catch (Exception e) {
@@ -286,7 +287,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         log.debug("created {} PVCs", pvcs.stream().filter(Objects::nonNull).count());
 
         // create additional manifests -> use the effective (i.e. patched) namespace if no namespace is provided
-        createAdditionalManifests(proxy, effectiveKubeNamespace);
+        createAdditionalManifests(proxy, effectiveKubeNamespace, specLabels, runtimeLabels);
 
         var startedPod = kubeClient
                 .pods()
@@ -300,7 +301,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         log.debug("pod registered");
 
         // If SP runs inside the cluster, it can access pods directly and doesn't need any port publishing service.
-        var service = makeServiceIfNecessary(specs, proxy, containerGroup, identifierLabel, identifierValue, apiVersion, labels, effectiveKubeNamespace);
+        var service = makeServiceIfNecessary(specs, proxy, containerGroup, apiVersion, effectiveKubeNamespace, specLabels, runtimeLabels);
         containerGroup.getParameters().put(PARAM_SERVICE, service);
 
         log.debug("service registered");
@@ -310,7 +311,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
         return containerGroup;
     }
 
-    private void createAdditionalManifests(Proxy proxy, String namespace) {
+    private void createAdditionalManifests(Proxy proxy, String namespace, Map<String, String> specLabels, Map<String, String> runtimeLabels) {
         for (HasMetadata fullObject : getAdditionManifestsAsObjects(proxy, namespace)) {
             if (kubeClient.resource(fullObject).fromServer().get() == null) {
                 String identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
@@ -321,6 +322,8 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     labels = new HashMap<>();
                 }
                 labels.put(identifierLabel, identifierValue);
+                labels.putAll(specLabels);
+                labels.putAll(runtimeLabels);
                 cache.setLabels(labels);
                 fullObject.setMetadata(cache);
                 kubeClient.resource(fullObject).createOrReplace();
@@ -378,9 +381,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
         }
     }
 
-    private Service makeServiceIfNecessary(List<ContainerSpec> specs, Proxy proxy, ContainerGroup containerGroup, String identifierLabel, String identifierValue, String apiVersion, Map<String, String> allLabels, String effectiveKubeNamespace) {
+    private Service makeServiceIfNecessary(List<ContainerSpec> specs, Proxy proxy, ContainerGroup containerGroup, String apiVersion, String effectiveKubeNamespace, Map<String, String> specLabels, Map<String, String> runtimeLabels) {
         Service service = null;
         if (!isUseInternalNetwork()) {
+            String identifierLabel = environment.getProperty("proxy.identifier-label", "comp.polyu.edu.hk/vl-identifier");
+            String identifierValue = environment.getProperty("proxy.identifier-value", "default-identifier");
+
             var servicePorts = specs.stream()
                     .flatMap(x -> x.getPortMapping().values().stream())
                     .map(p -> new ServicePortBuilder().withPort(p).build())
@@ -391,14 +397,12 @@ public class KubernetesBackend extends AbstractContainerBackend {
                     .withKind("Service")
                     .withNewMetadata()
                     .withName("vl-service-" + containerGroup.getId())
-                    .addToLabels(RUNTIME_LABEL_PROXY_ID, proxy.getId())
-                    .addToLabels(RUNTIME_LABEL_PROXIED_APP, "true")
-                    .addToLabels(RUNTIME_LABEL_INSTANCE, instanceId)
                     .addToLabels(identifierLabel, identifierValue)
-                    .addToLabels(allLabels)
+                    .addToLabels(specLabels)
+                    .addToLabels(runtimeLabels)
                     .endMetadata()
                     .withNewSpec()
-                    .addToSelector("app", containerGroup.getId())
+                    .addToSelector(RUNTIME_LABEL_PROXY_ID, proxy.getId())
                     .withType("NodePort")
                     .withPorts(servicePorts)
                     .endSpec()
@@ -467,17 +471,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
     @Override
     @SuppressWarnings("unchecked")
     protected void doStopProxy(Proxy proxy) throws VLabControllerException {
-        var containerGroup = proxy.getContainerGroup();
-        var kubeNamespace = containerGroup.getParameters().get(PARAM_NAMESPACE).toString();
+        var kubeNamespace = proxy.getNamespace();
         if (kubeNamespace == null) {
             throw new VLabControllerException("Failed to stop proxy: Cannot get proxy's namespace");
         }
-        var pod = (Pod) containerGroup.getParameters().get(PARAM_POD);
-        if (pod != null) kubeClient.pods().inNamespace(kubeNamespace).delete(pod);
-        var service = (Service) containerGroup.getParameters().get(PARAM_SERVICE);
-        if (service != null) kubeClient.services().inNamespace(kubeNamespace).delete(service);
-        var pvcs = (List<PersistentVolumeClaim>) containerGroup.getParameters().get(PARAM_PVC);
-        if (!Objects.requireNonNull(pvcs).isEmpty()) kubeClient.persistentVolumeClaims().inNamespace(kubeNamespace).delete(pvcs);
+
+        kubeClient.pods().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
+        kubeClient.services().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
+        kubeClient.persistentVolumeClaims().inNamespace(kubeNamespace).withLabel(RUNTIME_LABEL_PROXY_ID, proxy.getId()).delete();
 
         // delete additional manifests
         for (var fullObject : getAdditionManifestsAsObjects(proxy, kubeNamespace)) {
