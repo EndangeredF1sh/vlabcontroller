@@ -196,6 +196,7 @@ public class ProxyService {
         proxy.setStatus(ProxyStatus.New);
         proxy.setUserId(userService.getCurrentUserId());
         proxy.setSpec(spec);
+        proxy.setAdmin(userService.isAdmin());
         activeProxies.add(proxy);
 
         try {
