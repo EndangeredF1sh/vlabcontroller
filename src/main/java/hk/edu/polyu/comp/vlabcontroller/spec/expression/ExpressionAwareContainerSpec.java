@@ -96,8 +96,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return settings;
     }
 
-    public List<VolumeMount> getVolumeMount() {
-        return source.getVolumeMount().stream().map(volumeMount -> new VolumeMountBuilder()
+    public List<VolumeMount> getVolumeMounts() {
+        return source.getVolumeMounts().stream().map(volumeMount -> new VolumeMountBuilder()
             .withMountPath(resolve(volumeMount.getMountPath()))
             .withMountPropagation(resolve(volumeMount.getMountPropagation()))
             .withName(resolve(volumeMount.getName()))

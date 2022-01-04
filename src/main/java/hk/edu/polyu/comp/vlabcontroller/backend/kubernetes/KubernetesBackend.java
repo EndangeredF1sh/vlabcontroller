@@ -172,7 +172,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         var containers = specs.stream()
                 .map(unchecked(spec -> {
-                    var volumeMounts = spec.getVolumeMount();
+                    var volumeMounts = spec.getVolumeMounts();
                     var envVars = buildEnv(spec, proxy).stream()
                             .map(envString -> {
                                 var e = envString.split("=");
