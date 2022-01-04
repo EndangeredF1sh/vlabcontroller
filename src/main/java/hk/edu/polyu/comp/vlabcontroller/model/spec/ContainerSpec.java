@@ -51,6 +51,9 @@ public class ContainerSpec {
     private List<VolumeMount> volumeMounts = new ArrayList<>();
     @Getter
     @Setter
+    private List<VolumeMount> adminVolumeMounts = new ArrayList<>();
+    @Getter
+    @Setter
     private Map<String, String> settings = new HashMap<>();
 
     /**
@@ -87,7 +90,6 @@ public class ContainerSpec {
 
     @Deprecated(since="1.0.2", forRemoval = true)
     public List<VolumeMount> getVolumeMount() {
-        log.warn("containerSpec[].volumeMount is deprecated in 1.0.2+, unavailable in 1.1+, use containerSpec[].volumeMounts instead");
         return volumeMount;
     }
 
@@ -105,6 +107,7 @@ public class ContainerSpec {
         target.setResources(resources);
         target.setPrivileged(privileged);
         target.getVolumeMounts().addAll(volumeMounts);
+        target.getAdminVolumeMounts().addAll(adminVolumeMounts);
         target.getSettings().putAll(settings);
     }
 }

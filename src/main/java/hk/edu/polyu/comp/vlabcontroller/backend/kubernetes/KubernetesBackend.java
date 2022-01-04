@@ -173,6 +173,13 @@ public class KubernetesBackend extends AbstractContainerBackend {
         var containers = specs.stream()
                 .map(unchecked(spec -> {
                     var volumeMounts = spec.getVolumeMounts();
+                    if (proxy.isAdmin()) {
+                        var adminVolumeMounts = spec.getAdminVolumeMounts();
+                        if (!adminVolumeMounts.isEmpty()) {
+                            volumeMounts.addAll(adminVolumeMounts);
+                            log.debug("Admin VolumeMount loaded: {}", adminVolumeMounts);
+                        }
+                    }
                     var envVars = buildEnv(spec, proxy).stream()
                             .map(envString -> {
                                 var e = envString.split("=");
