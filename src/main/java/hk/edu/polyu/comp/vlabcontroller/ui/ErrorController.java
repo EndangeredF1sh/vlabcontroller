@@ -1,7 +1,7 @@
 package hk.edu.polyu.comp.vlabcontroller.ui;
 
 import hk.edu.polyu.comp.vlabcontroller.api.BaseController;
-import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFaillureHandler;
+import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
 import org.keycloak.adapters.OIDCAuthenticationError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,9 +27,9 @@ public class ErrorController extends BaseController implements org.springframewo
     public String handleError(ModelMap map, HttpServletRequest request, HttpServletResponse response) {
 
         // handle keycloak errors
-        Object obj = request.getSession().getAttribute(AuthenticationFaillureHandler.SP_KEYCLOAK_ERROR_REASON);
+        Object obj = request.getSession().getAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
         if (obj instanceof OIDCAuthenticationError.Reason) {
-            request.getSession().removeAttribute(AuthenticationFaillureHandler.SP_KEYCLOAK_ERROR_REASON);
+            request.getSession().removeAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
             OIDCAuthenticationError.Reason reason = (OIDCAuthenticationError.Reason) obj;
             if (reason == OIDCAuthenticationError.Reason.INVALID_STATE_COOKIE ||
                     reason == OIDCAuthenticationError.Reason.STALE_TOKEN) {

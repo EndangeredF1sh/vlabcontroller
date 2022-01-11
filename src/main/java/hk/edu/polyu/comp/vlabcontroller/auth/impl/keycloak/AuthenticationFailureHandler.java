@@ -9,14 +9,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class AuthenticationFaillureHandler extends KeycloakAuthenticationFailureHandler {
+public class AuthenticationFailureHandler extends KeycloakAuthenticationFailureHandler {
     public static final String SP_KEYCLOAK_ERROR_REASON = "SP_KEYCLOAK_ERROR_REASON";
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                                         AuthenticationException exception) throws IOException, ServletException {
 
-        // Note: Keycloak calls sendError before this method gets called, therefore we cannot do much with reuqest.
+        // Note: Keycloak calls sendError before this method gets called, therefore we cannot do much with request.
         // We now set a flag in the session indicating the reason of the Keycloak error.
         // The error page can then properly handle this.
 

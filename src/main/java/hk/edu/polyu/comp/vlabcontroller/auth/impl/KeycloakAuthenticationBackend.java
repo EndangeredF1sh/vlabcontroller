@@ -1,7 +1,7 @@
 package hk.edu.polyu.comp.vlabcontroller.auth.impl;
 
 import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
-import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFaillureHandler;
+import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
 import org.keycloak.adapters.AdapterDeploymentContext;
 import org.keycloak.adapters.KeycloakConfigResolver;
 import org.keycloak.adapters.KeycloakDeployment;
@@ -156,7 +156,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @Bean
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     public KeycloakAuthenticationFailureHandler keycloakAuthenticationFailureHandler() {
-        return new AuthenticationFaillureHandler();
+        return new AuthenticationFailureHandler();
     }
 
     @Bean
