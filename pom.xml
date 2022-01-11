@@ -199,7 +199,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-spring-security-adapter</artifactId>
-            <version>14.0.0</version>
+            <version>15.0.2</version>
         </dependency>
 
         <!-- Docker -->
