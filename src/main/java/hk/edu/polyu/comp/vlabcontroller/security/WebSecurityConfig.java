@@ -44,13 +44,6 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(WebSecurity web) {
-//		web
-//			.ignoring().antMatchers("/css/**").and()
-//			.ignoring().antMatchers("/img/**").and()
-//			.ignoring().antMatchers("/js/**").and()
-//			.ignoring().antMatchers("/assets/**").and()
-//			.ignoring().antMatchers("/webjars/**").and();
-//
         if (customConfigs != null) {
             for (ICustomSecurityConfig cfg : customConfigs) {
                 try {
@@ -106,8 +99,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         if (auth.hasAuthorization()) {
             http.authorizeRequests().antMatchers(
-                    "/login", "/signin/**", "/auth-error", "/app-access-denied", "/logout-success",
-                    "/favicon.ico", "/css/**", "/img/**", "/js/**", "/assets/**", "/webjars/**").permitAll();
+                    "/login", "/auth-error", "/app-access-denied", "/logout-success", "/error",
+                    "/favicon.ico", "/assets/**").permitAll();
             http
                     .formLogin()
                     .loginPage("/login")
