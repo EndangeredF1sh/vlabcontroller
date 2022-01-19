@@ -110,9 +110,9 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     protected KeycloakAuthenticationProcessingFilter keycloakAuthenticationProcessingFilter() throws Exception {
         // Possible solution for issue #21037, create a custom RequestMatcher that doesn't include a QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) request matcher.
-        // The QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) caused the HTTP requests to be changed before they where processed.
+        // The QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) caused the HTTP requests to be changed before they were processed.
         // Because the HTTP requests are adapted before they are processed, the requested failed to complete successfully and caused an io.undertow.server.TruncatedResponseException
-        // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourself
+        // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourselves
         RequestMatcher requestMatcher =
                 new OrRequestMatcher(
                         new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
