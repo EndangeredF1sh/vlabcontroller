@@ -21,7 +21,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.arquillian_cube>1.18.2</version.arquillian_cube>
         <java.version>11</java.version>
-        <maven.test.skip>true</maven.test.skip>
         <repackage.classifier/>
         <spring-cloud.version>2021.0.0-M3</spring-cloud.version>
     </properties>

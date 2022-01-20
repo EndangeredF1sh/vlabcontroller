@@ -258,9 +258,7 @@ public class ProxyService {
         if (async) containerKiller.submit(releaser);
         else releaser.run();
 
-        for (Entry<String, URI> target : proxy.getTargets().entrySet()) {
-            mappingManager.removeMapping(target.getKey());
-        }
+        mappingManager.removeProxyMapping(proxy.getId());
     }
 
 
@@ -296,8 +294,6 @@ public class ProxyService {
         if (async) containerKiller.submit(releaser);
         else releaser.run();
 
-        for (Entry<String, URI> target : proxy.getTargets().entrySet()) {
-            mappingManager.removeMapping(target.getKey());
-        }
+        mappingManager.removeProxyMapping(proxy.getId());
     }
 }
