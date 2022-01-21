@@ -36,7 +36,7 @@ public class RedisSessionProxyLogoutStrategy implements IProxyLogoutStrategy {
             return;
         }
         for (Proxy proxy : proxyService.getProxies(p -> p.getUserId().equals(userId), true)) {
-            proxyService.stopProxy(proxy, true, true);
+            proxyService.stopProxy(proxy, true, true, 0);
         }
     }
 }

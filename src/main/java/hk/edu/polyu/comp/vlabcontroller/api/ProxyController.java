@@ -66,7 +66,7 @@ public class ProxyController extends BaseController {
         Proxy proxy = proxyService.findProxy(p -> p.getId().equals(proxyId), false);
         if (proxy == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 
-        proxyService.stopProxy(proxy, true, false);
+        proxyService.stopProxy(proxy, true, false, 0);
         return new ResponseEntity<>("Proxy stopped", HttpStatus.OK);
     }
 }

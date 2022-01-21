@@ -234,7 +234,7 @@ public class HeartbeatService {
                             log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), engagementProperties.getMaxAge().toHours()));
                             proxyHeartbeats.remove(proxy.getId());
                             websocketHeartbeats.remove(proxy.getId());
-                            proxyService.stopProxy(proxy, true, true);
+                            proxyService.stopProxy(proxy, true, true, 0);
                             continue;
                         }
 

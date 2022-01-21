@@ -20,7 +20,7 @@ public class DefaultProxyLogoutStrategy implements IProxyLogoutStrategy {
     @Override
     public void onLogout(String userId, boolean expired) {
         for (var proxy : proxyService.getProxies(p -> p.getUserId().equals(userId), true)) {
-            proxyService.stopProxy(proxy, true, true);
+            proxyService.stopProxy(proxy, true, true, 0);
         }
     }
 

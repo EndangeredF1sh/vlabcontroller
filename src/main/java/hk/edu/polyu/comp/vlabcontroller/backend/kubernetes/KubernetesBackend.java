@@ -567,7 +567,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 if (failedPods != null && !failedPods.getItems().isEmpty()) {
                     for (var pod : failedPods.getItems()) {
                         var proxyId = pod.getMetadata().getLabels().get("comp.polyu.edu.hk/vl-proxy-id");
-                        proxyService.stopProxy(proxyService.getProxy(proxyId), true, true);
+                        proxyService.stopProxy(proxyService.getProxy(proxyId), true, true, 0);
                         log.error("Cleaned error proxy {}", proxyId);
                     }
                 }
