@@ -96,8 +96,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return settings;
     }
 
-    public List<VolumeMount> getVolumeMount() {
-        return source.getVolumeMount().stream().map(volumeMount -> new VolumeMountBuilder()
+    public List<VolumeMount> getVolumeMounts() {
+        return source.getVolumeMounts().stream().map(volumeMount -> new VolumeMountBuilder()
             .withMountPath(resolve(volumeMount.getMountPath()))
             .withMountPropagation(resolve(volumeMount.getMountPropagation()))
             .withName(resolve(volumeMount.getName()))
@@ -105,6 +105,18 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
             .withSubPathExpr(resolve(volumeMount.getSubPathExpr()))
             .withReadOnly(volumeMount.getReadOnly())
             .build()).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<VolumeMount> getAdminVolumeMounts() {
+        return source.getAdminVolumeMounts().stream().map(volumeMount -> new VolumeMountBuilder()
+                .withMountPath(resolve(volumeMount.getMountPath()))
+                .withMountPropagation(resolve(volumeMount.getMountPropagation()))
+                .withName(resolve(volumeMount.getName()))
+                .withSubPath(resolve(volumeMount.getSubPath()))
+                .withSubPathExpr(resolve(volumeMount.getSubPathExpr()))
+                .withReadOnly(volumeMount.getReadOnly())
+                .build()).collect(Collectors.toList());
     }
 
     protected String resolve(String expression) {

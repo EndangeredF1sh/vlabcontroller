@@ -1,7 +1,7 @@
 package hk.edu.polyu.comp.vlabcontroller.auth.impl;
 
 import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
-import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFaillureHandler;
+import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
 import org.keycloak.adapters.AdapterDeploymentContext;
 import org.keycloak.adapters.KeycloakConfigResolver;
 import org.keycloak.adapters.KeycloakDeployment;
@@ -36,6 +36,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -47,10 +49,7 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.ServletException;
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -110,9 +109,9 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     protected KeycloakAuthenticationProcessingFilter keycloakAuthenticationProcessingFilter() throws Exception {
         // Possible solution for issue #21037, create a custom RequestMatcher that doesn't include a QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) request matcher.
-        // The QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) caused the HTTP requests to be changed before they where processed.
+        // The QueryParamPresenceRequestMatcher(OAuth2Constants.ACCESS_TOKEN) caused the HTTP requests to be changed before they were processed.
         // Because the HTTP requests are adapted before they are processed, the requested failed to complete successfully and caused an io.undertow.server.TruncatedResponseException
-        // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourself
+        // If in the future we need a RequestMatcher for het ACCESS_TOKEN, we can implement one ourselves
         RequestMatcher requestMatcher =
                 new OrRequestMatcher(
                         new AntPathRequestMatcher(KeycloakAuthenticationEntryPoint.DEFAULT_LOGIN_URI),
@@ -150,13 +149,16 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @Bean
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     protected SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-        return new RegisterSessionAuthenticationStrategy(new SessionRegistryImpl());
+        return new CompositeSessionAuthenticationStrategy(Arrays.asList(
+                new RegisterSessionAuthenticationStrategy(new SessionRegistryImpl()),
+                new ChangeSessionIdAuthenticationStrategy()
+        ));
     }
 
     @Bean
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     public KeycloakAuthenticationFailureHandler keycloakAuthenticationFailureHandler() {
-        return new AuthenticationFaillureHandler();
+        return new AuthenticationFailureHandler();
     }
 
     @Bean
@@ -167,7 +169,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
         cfg.setAuthServerUrl(environment.getProperty("proxy.keycloak.auth-server-url"));
         cfg.setResource(environment.getProperty("proxy.keycloak.resource"));
         cfg.setSslRequired(environment.getProperty("proxy.keycloak.ssl-required", "external"));
-        cfg.setUseResourceRoleMappings(Boolean.valueOf(environment.getProperty("proxy.keycloak.use-resource-role-mappings", "false")));
+        cfg.setUseResourceRoleMappings(Boolean.parseBoolean(environment.getProperty("proxy.keycloak.use-resource-role-mappings", "false")));
         Map<String, Object> credentials = new HashMap<>();
         credentials.put("secret", environment.getProperty("proxy.keycloak.credentials-secret"));
         cfg.setCredentials(credentials);
@@ -194,7 +196,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
                 List<GrantedAuthority> auth = token.getAuthorities().stream()
                         .map(t -> t.getAuthority().toUpperCase())
                         .map(a -> a.startsWith("ROLE_") ? a : "ROLE_" + a)
-                        .map(a -> new KeycloakRole(a))
+                        .map(KeycloakRole::new)
                         .collect(Collectors.toList());
                 String nameAttribute = environment.getProperty("proxy.keycloak.name-attribute", IDToken.NAME).toLowerCase();
                 return new KeycloakAuthenticationToken2(token.getAccount(), token.isInteractive(), nameAttribute, auth);
@@ -220,6 +222,9 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
         @Override
         public String getName() {
             IDToken token = getAccount().getKeycloakSecurityContext().getIdToken();
+            if (token == null) {
+                token = getAccount().getKeycloakSecurityContext().getToken();
+            }
             switch (nameAttribute) {
                 case IDToken.PREFERRED_USERNAME:
                     return token.getPreferredUsername();

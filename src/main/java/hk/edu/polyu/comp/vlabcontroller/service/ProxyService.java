@@ -196,6 +196,7 @@ public class ProxyService {
         proxy.setStatus(ProxyStatus.New);
         proxy.setUserId(userService.getCurrentUserId());
         proxy.setSpec(spec);
+        proxy.setAdmin(userService.isAdmin());
         activeProxies.add(proxy);
 
         try {
@@ -227,44 +228,7 @@ public class ProxyService {
     }
 
     /**
-     * Stop a running proxy.
-     *
-     * @param proxy               The proxy to stop.
-     * @param async               True to return immediately and stop the proxy in an asynchronous manner.
-     * @param ignoreAccessControl True to allow access to any proxy, regardless of the current security context.
-     */
-    public void stopProxy(Proxy proxy, boolean async, boolean ignoreAccessControl) {
-        if (!ignoreAccessControl && !userService.isAdmin() && !userService.isOwner(proxy)) {
-            throw new AccessDeniedException(String.format("Cannot stop proxy %s: access denied", proxy.getId()));
-        }
-
-        activeProxies.remove(proxy);
-
-        Runnable releaser = () -> {
-            try {
-                backend.stopProxy(proxy);
-                logService.detach(proxy);
-                log.info(String.format("Proxy released [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId()));
-                if (proxy.getStartupTimestamp() > 0) {
-                    applicationEventPublisher.publishEvent(new ProxyStopEvent(this, proxy.getUserId(),
-                            proxy.getSpec().getId(),
-                            Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp())));
-                }
-            } catch (Exception e) {
-                log.error("Failed to release proxy " + proxy.getId(), e);
-            }
-        };
-        if (async) containerKiller.submit(releaser);
-        else releaser.run();
-
-        for (Entry<String, URI> target : proxy.getTargets().entrySet()) {
-            mappingManager.removeMapping(target.getKey());
-        }
-    }
-
-
-    /**
-     * Stop a running proxy, overloaded for idle silence offset
+     * Stop a running proxy
      *
      * @param proxy               The proxy to stop.
      * @param async               True to return immediately and stop the proxy in an asynchronous manner.
@@ -295,8 +259,6 @@ public class ProxyService {
         if (async) containerKiller.submit(releaser);
         else releaser.run();
 
-        for (Entry<String, URI> target : proxy.getTargets().entrySet()) {
-            mappingManager.removeMapping(target.getKey());
-        }
+        mappingManager.removeProxyMapping(proxy.getId());
     }
 }

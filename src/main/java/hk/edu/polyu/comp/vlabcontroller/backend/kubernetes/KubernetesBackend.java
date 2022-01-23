@@ -172,7 +172,14 @@ public class KubernetesBackend extends AbstractContainerBackend {
 
         var containers = specs.stream()
                 .map(unchecked(spec -> {
-                    var volumeMounts = spec.getVolumeMount();
+                    var volumeMounts = spec.getVolumeMounts();
+                    if (proxy.isAdmin()) {
+                        var adminVolumeMounts = spec.getAdminVolumeMounts();
+                        if (!adminVolumeMounts.isEmpty()) {
+                            volumeMounts.addAll(adminVolumeMounts);
+                            log.debug("Admin VolumeMount loaded: {}", adminVolumeMounts);
+                        }
+                    }
                     var envVars = buildEnv(spec, proxy).stream()
                             .map(envString -> {
                                 var e = envString.split("=");
@@ -560,7 +567,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                 if (failedPods != null && !failedPods.getItems().isEmpty()) {
                     for (var pod : failedPods.getItems()) {
                         var proxyId = pod.getMetadata().getLabels().get("comp.polyu.edu.hk/vl-proxy-id");
-                        proxyService.stopProxy(proxyService.getProxy(proxyId), true, true);
+                        proxyService.stopProxy(proxyService.getProxy(proxyId), true, true, 0);
                         log.error("Cleaned error proxy {}", proxyId);
                     }
                 }

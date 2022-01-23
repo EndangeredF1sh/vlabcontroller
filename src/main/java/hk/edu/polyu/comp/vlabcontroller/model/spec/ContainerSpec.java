@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.util.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Log4j2
 public class ContainerSpec {
     @Getter
     @Setter
@@ -43,9 +45,13 @@ public class ContainerSpec {
     @Getter
     @Setter
     private ResourceSpec resources = new ResourceSpec();
+    private List<VolumeMount> volumeMount;
     @Getter
     @Setter
-    private List<VolumeMount> volumeMount = new ArrayList<>();
+    private List<VolumeMount> volumeMounts = new ArrayList<>();
+    @Getter
+    @Setter
+    private List<VolumeMount> adminVolumeMounts = new ArrayList<>();
     @Getter
     @Setter
     private Map<String, String> settings = new HashMap<>();
@@ -75,6 +81,18 @@ public class ContainerSpec {
         }
     }
 
+    @Deprecated(since="1.0.2", forRemoval = true)
+    public void setVolumeMount(List<VolumeMount> volumeMount) {
+        log.warn("containerSpec[].volumeMount is deprecated in 1.0.2+, unavailable in 1.1+, use containerSpec[].volumeMounts instead");
+        setVolumeMounts(volumeMount);
+        this.volumeMount = volumeMounts;
+    }
+
+    @Deprecated(since="1.0.2", forRemoval = true)
+    public List<VolumeMount> getVolumeMount() {
+        return volumeMount;
+    }
+
     public void copy(ContainerSpec target) {
         target.setImage(image);
         target.getCmd().addAll(cmd);
@@ -88,7 +106,8 @@ public class ContainerSpec {
         target.getPortMapping().putAll(entryPoints.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x.getPort()), EntryPointSpec::getPort)));
         target.setResources(resources);
         target.setPrivileged(privileged);
-        target.getVolumeMount().addAll(volumeMount);
+        target.getVolumeMounts().addAll(volumeMounts);
+        target.getAdminVolumeMounts().addAll(adminVolumeMounts);
         target.getSettings().putAll(settings);
     }
 }

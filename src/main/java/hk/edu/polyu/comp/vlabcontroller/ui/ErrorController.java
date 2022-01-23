@@ -1,7 +1,8 @@
 package hk.edu.polyu.comp.vlabcontroller.ui;
 
 import hk.edu.polyu.comp.vlabcontroller.api.BaseController;
-import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFaillureHandler;
+import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
+import lombok.extern.log4j.Log4j2;
 import org.keycloak.adapters.OIDCAuthenticationError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,7 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
+@Log4j2
 @Controller
 @RequestMapping("/error")
 public class ErrorController extends BaseController implements org.springframework.boot.web.servlet.error.ErrorController {
@@ -27,15 +29,15 @@ public class ErrorController extends BaseController implements org.springframewo
     public String handleError(ModelMap map, HttpServletRequest request, HttpServletResponse response) {
 
         // handle keycloak errors
-        Object obj = request.getSession().getAttribute(AuthenticationFaillureHandler.SP_KEYCLOAK_ERROR_REASON);
+        Object obj = request.getSession().getAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
         if (obj instanceof OIDCAuthenticationError.Reason) {
-            request.getSession().removeAttribute(AuthenticationFaillureHandler.SP_KEYCLOAK_ERROR_REASON);
+            request.getSession().removeAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
             OIDCAuthenticationError.Reason reason = (OIDCAuthenticationError.Reason) obj;
             if (reason == OIDCAuthenticationError.Reason.INVALID_STATE_COOKIE ||
                     reason == OIDCAuthenticationError.Reason.STALE_TOKEN) {
                 // These errors are typically caused by users using wrong bookmarks (e.g. bookmarks with states in)
                 // or when some cookies got stale. However, the user is logged into the IDP, therefore it's enough to
-                // send the user to the main page and they will get logged in automatically.
+                // send the user to the main page, and they will get logged in automatically.
                 return "redirect:/";
             } else {
                 return "redirect:/auth-error";
@@ -52,7 +54,12 @@ public class ErrorController extends BaseController implements org.springframewo
             msg[0] = HttpStatus.valueOf(response.getStatus()).getReasonPhrase();
         }
 
-        if (response.getStatus() == 200 && (exception != null) && isAccountStatusException(exception)) {
+        if (response.getStatus() == 200 && isAccountStatusException(exception)) {
+            return "redirect:/";
+        }
+
+        if (isIllegalStateException(exception)) {
+            log.warn("No state cookie on login attempt, force redirect to homepage");
             return "redirect:/";
         }
 
@@ -98,14 +105,22 @@ public class ErrorController extends BaseController implements org.springframewo
             stackTrace = stackTrace.replace(System.getProperty("line.separator"), "<br/>");
         }
 
-        if (message == null || message.isEmpty()) message = "An unexpected server error occurred";
-        if (stackTrace == null || stackTrace.isEmpty()) stackTrace = "n/a";
+        if (message.isEmpty()) message = "An unexpected server error occurred";
+        if (stackTrace.isEmpty()) stackTrace = "n/a";
 
         return new String[]{message, stackTrace};
     }
 
     private boolean isAccountStatusException(Throwable exception) {
+        if (exception == null) return false;
         if (exception instanceof AccountStatusException) return true;
+        if (exception.getCause() != null) return isAccountStatusException(exception.getCause());
+        return false;
+    }
+
+    private boolean isIllegalStateException(Throwable exception) {
+        if (exception == null) return false;
+        if (exception instanceof IllegalStateException) return true;
         if (exception.getCause() != null) return isAccountStatusException(exception.getCause());
         return false;
     }

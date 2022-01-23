@@ -1,7 +1,8 @@
 package hk.edu.polyu.comp.vlabcontroller.util;
 
-import com.google.common.collect.Streams;
+import hk.edu.polyu.comp.vlabcontroller.model.runtime.PortMappingMetadata;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
+import hk.edu.polyu.comp.vlabcontroller.model.runtime.ProxyMappingMetadata;
 import hk.edu.polyu.comp.vlabcontroller.service.HeartbeatService;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -14,8 +15,7 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.PathMatcher;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.ServletException;
@@ -28,25 +28,24 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * This component keeps track of which proxy mappings (i.e. URL endpoints) are currently registered,
  * and tells Undertow where they should proxy to.
  */
+@Log4j2
 @Component
 public class ProxyMappingManager {
 
     private static final String PROXY_INTERNAL_ENDPOINT = "/proxy_endpoint";
     private static final String PROXY_PORT_MAPPINGS_ENDPOINT = "/port_mappings";
     private static final AttachmentKey<ProxyMappingManager> ATTACHMENT_KEY_DISPATCHER = AttachmentKey.create(ProxyMappingManager.class);
-    private final Map<String, String> mappings = new HashMap<>();
-    private final Map<String, URI> defaultTargetMappings = new HashMap<>();
-    private final Logger log = LogManager.getLogger(ProxyMappingManager.class);
+    private final Map<String, ProxyMappingMetadata> proxyMappings = new HashMap<>(); // proxyId -> metadata
     private PathHandler pathHandler;
     private final HeartbeatService heartbeatService;
 
@@ -65,7 +64,10 @@ public class ProxyMappingManager {
     public synchronized void addMapping(String proxyId, String mapping, URI target) {
         if (pathHandler == null)
             throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
-        if (mappings.get(mapping) != null) return;
+        if (proxyMappings.containsKey(proxyId)) {
+            if (proxyMappings.get(proxyId).containsExactMappingPath(mapping)) return;
+        }
+        ProxyMappingMetadata proxyMappingMetadata = proxyMappings.computeIfAbsent(proxyId, value -> new ProxyMappingMetadata());
 
         LoadBalancingProxyClient proxyClient = new LoadBalancingProxyClient() {
             @Override
@@ -81,24 +83,33 @@ public class ProxyMappingManager {
         proxyClient.setMaxQueueSize(100);
         proxyClient.addHost(target);
 
-        mappings.put(mapping, proxyId);
-        defaultTargetMappings.computeIfAbsent(proxyId, key -> target);
-
         String path = PROXY_INTERNAL_ENDPOINT + "/" + mapping;
         pathHandler.addPrefixPath(path, new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404));
+
+        proxyMappingMetadata.setDefaultTarget(target);
+        proxyMappingMetadata.getPortMappingMetadataList().add(new PortMappingMetadata(mapping, target, proxyClient));
+        log.debug("mapping {} was added, current mappings: {}", mapping, proxyMappings);
     }
 
-    public synchronized void removeMapping(String mapping) {
+    public synchronized void removeProxyMapping(String proxyId) {
         if (pathHandler == null)
             throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
-        String proxyId = mappings.remove(mapping);
-        defaultTargetMappings.remove(proxyId);
-        pathHandler.removePrefixPath(PROXY_INTERNAL_ENDPOINT + "/" + mapping);
+        if (proxyMappings.containsKey(proxyId)) {
+            ProxyMappingMetadata metadata = proxyMappings.get(proxyId);
+            metadata.getPortMappingMetadataList().forEach(e -> {
+                e.getLoadBalancingProxyClient().closeCurrentConnections();
+                e.getLoadBalancingProxyClient().removeHost(e.getTarget());
+                pathHandler.removePrefixPath(PROXY_INTERNAL_ENDPOINT + "/"  + e.getPortMapping());
+            });
+            proxyMappings.remove(proxyId);
+        }
+        log.debug("removed proxy {}, current mappings: {}", proxyId, proxyMappings);
     }
 
     public String getProxyId(String mapping) {
-        for (Entry<String, String> e : mappings.entrySet()) {
-            if (mapping.toLowerCase().startsWith(e.getKey().toLowerCase())) return e.getValue();
+        for (Entry<String, ProxyMappingMetadata> e : proxyMappings.entrySet()) {
+            ProxyMappingMetadata metadata = e.getValue();
+            if (metadata.containsMappingPathPrefix(mapping)) return e.getKey();
         }
         return null;
     }
@@ -157,14 +168,14 @@ public class ProxyMappingManager {
         exchange.putAttachment(ATTACHMENT_KEY_DISPATCHER, this);
 
         String proxyId = proxy.getId();
-        URI defaultTarget = defaultTargetMappings.get(proxyId);
+        URI defaultTarget = proxyMappings.get(proxyId).getDefaultTarget();
         String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
         URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
         int[] failedResponseCode = new int[1];
         boolean targetConnected = Retrying.retry(i -> {
             try {
                 String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
-                log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Streams.stream(request.getHeaderNames().asIterator()).collect(Collectors.toList()));
+                log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Collections.list(request.getHeaderNames()));
 
                 // Handle websocket case
                 if (request.getHeaders("Upgrade").hasMoreElements()) {

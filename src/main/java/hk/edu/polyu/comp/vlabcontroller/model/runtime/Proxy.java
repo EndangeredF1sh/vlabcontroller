@@ -29,6 +29,9 @@ public class Proxy {
     private String userId;
     @Getter
     @Setter
+    private boolean admin;
+    @Getter
+    @Setter
     private String namespace;
     @Getter
     @Setter
