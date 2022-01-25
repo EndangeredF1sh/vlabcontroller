@@ -4,6 +4,7 @@ import hk.edu.polyu.comp.vlabcontroller.api.BaseController;
 import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
 import lombok.extern.log4j.Log4j2;
 import org.keycloak.adapters.OIDCAuthenticationError;
+import org.keycloak.adapters.springsecurity.authentication.KeycloakCookieBasedRedirect;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AccountStatusException;
@@ -38,6 +39,7 @@ public class ErrorController extends BaseController implements org.springframewo
                 // These errors are typically caused by users using wrong bookmarks (e.g. bookmarks with states in)
                 // or when some cookies got stale. However, the user is logged into the IDP, therefore it's enough to
                 // send the user to the main page, and they will get logged in automatically.
+                response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl((String) null));
                 return "redirect:/";
             } else {
                 return "redirect:/auth-error";
@@ -60,6 +62,7 @@ public class ErrorController extends BaseController implements org.springframewo
 
         if (isIllegalStateException(exception)) {
             log.warn("No state cookie on login attempt, force redirect to homepage");
+            response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl((String) null));
             return "redirect:/";
         }
 
