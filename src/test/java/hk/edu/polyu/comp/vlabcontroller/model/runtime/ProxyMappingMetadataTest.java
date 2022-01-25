@@ -51,5 +51,6 @@ class ProxyMappingMetadataTest {
         Assertions.assertTrue(metadata.containsMappingPathPrefix("1ca3dde2-8fdf-4fe4-8327-6849e4d77fcd"));
         Assertions.assertTrue(metadata.containsMappingPathPrefix("1ca3dde2-8fdf-4fe4-8327-6849e4d77fcd/port_mappings"));
         Assertions.assertTrue(metadata.containsMappingPathPrefix("1ca3dde2-8fdf-4fe4-8327-6849e4d77fcd/port_mappings/8080"));
+        Assertions.assertTrue(metadata.containsMappingPathPrefix("1ca3dde2-8fdf-4fe4-8327-6849e4d77fcd/port_mappings/8080/"));
     }
 }

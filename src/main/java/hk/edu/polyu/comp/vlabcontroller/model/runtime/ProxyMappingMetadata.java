@@ -1,9 +1,9 @@
 package hk.edu.polyu.comp.vlabcontroller.model.runtime;
 
-import com.google.common.base.Strings;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.apache.commons.lang.StringUtils;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -26,6 +26,7 @@ public class ProxyMappingMetadata {
     }
 
     public boolean containsMappingPathPrefix(String prefix) {
-        return portMappingMetadataList.stream().anyMatch(p -> p.getPortMapping().startsWith(prefix));
+        String path = StringUtils.removeEnd(prefix, "/");
+        return portMappingMetadataList.stream().anyMatch(p -> p.getPortMapping().startsWith(path));
     }
 }
