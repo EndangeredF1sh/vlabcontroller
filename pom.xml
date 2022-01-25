@@ -5,7 +5,7 @@
 
     <groupId>hk.edu.polyu.comp.vl</groupId>
     <artifactId>vlabcontroller</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 
     <name>VLabController</name>
     <packaging>jar</packaging>
