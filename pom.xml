@@ -3,11 +3,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>eu.openanalytics</groupId>
-    <artifactId>containerproxy</artifactId>
-    <version>0.8.8-patch</version>
+    <groupId>hk.edu.polyu.comp.vl</groupId>
+    <artifactId>vlabcontroller</artifactId>
+    <version>1.0.3</version>
 
-    <name>ContainerProxy</name>
+    <name>VLabController</name>
     <packaging>jar</packaging>
 
     <parent>
@@ -21,7 +21,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.arquillian_cube>1.18.2</version.arquillian_cube>
         <java.version>11</java.version>
-        <maven.test.skip>true</maven.test.skip>
         <repackage.classifier/>
         <spring-cloud.version>2021.0.0-M3</spring-cloud.version>
     </properties>
@@ -199,7 +198,7 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-spring-security-adapter</artifactId>
-            <version>14.0.0</version>
+            <version>15.0.2</version>
         </dependency>
 
         <!-- Docker -->
@@ -275,6 +274,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -328,38 +328,37 @@
                         <image>ghcr.io/stevefan1999/vlab-controller-base</image>
                     </from>
                     <to>
-                        <image>ghcr.io/stevefan1999/vlab-controller</image>
+                        <image>ghcr.io/endangeredf1sh/vlab-controller:${project.version}</image>
                         <auth>
                             <username>${env.REGISTRY_USERNAME}</username>
                             <password>${env.REGISTRY_PASSWORD}</password>
                         </auth>
                     </to>
                     <container>
-                        <appRoot>/opt/shinyproxy</appRoot>
-                        <workingDirectory>/opt/shinyproxy</workingDirectory>
+                        <appRoot>/opt/vlab-controller</appRoot>
+                        <workingDirectory>/opt/vlab-controller</workingDirectory>
                         <environment>
-                            <SHINY_USER>shinyproxy</SHINY_USER>
-                            <PROXY_TEMPLATEPATH>/opt/shinyproxy/resources/templates</PROXY_TEMPLATEPATH>
+                            <VLAB_USER>vlab</VLAB_USER>
+                            <PROXY_TEMPLATEPATH>/opt/vlab-controller/resources/templates</PROXY_TEMPLATEPATH>
                             <SERVER_ERROR_WHITELABEL_ENABLED>false</SERVER_ERROR_WHITELABEL_ENABLED>
                             <TZ>Asia/Hong_Kong</TZ>
                         </environment>
                         <labels>
-                            <maintainer>Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com></maintainer>
+                            <maintainer>
+                                Aiden ZHANG Wenyi &lt;im.endangeredfish@gmail.com&gt;, Fan Chun Yin &lt;stevefan1999@gmail.com&gt;
+                            </maintainer>
                         </labels>
-                        <user>shinyproxy:shinyproxy</user>
+                        <user>vlab:vlab</user>
                         <args>
                             <arg>--spring.jmx.enabled=false</arg>
-                            <arg>--spring.config.location=/etc/shinyproxy/config/application.yml</arg>
+                            <arg>--spring.config.location=/etc/vlab-controller/config/application.yml</arg>
                         </args>
-                        <jvmFlags>
-                            <jvmFlag>--illegal-access=permit</jvmFlag>
-                        </jvmFlags>
                     </container>
                     <extraDirectories>
                         <paths>
                             <path>
                                 <from>resources/templates</from>
-                                <into>/opt/shinyproxy/resources/templates</into>
+                                <into>/opt/vlab-controller/resources/templates</into>
                             </path>
                         </paths>
                     </extraDirectories>
@@ -414,6 +413,28 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>3.2.0</version>
+            </plugin>
+            <plugin>
+                <groupId>net.nicoulaj.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.5</version>
+
+                <executions>
+                    <execution>
+                        <id>attach-artifact-checksums</id>
+                        <goals>
+                            <goal>artifacts</goal>
+                        </goals>
+                    </execution>
+                </executions>
+
+                <configuration>
+                    <attachChecksums>true</attachChecksums>
+                    <algorithms>
+                        <algorithm>SHA-256</algorithm>
+                        <algorithm>MD5</algorithm>
+                    </algorithms>
+                </configuration>
             </plugin>
         </plugins>
     </build>
