@@ -3,16 +3,19 @@ package hk.edu.polyu.comp.vlabcontroller.spec.expression;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ContainerSpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
+import lombok.Getter;
 
 public class SpecExpressionContext {
-
+    @Getter
     private ContainerSpec containerSpec;
+    @Getter
     private ProxySpec proxySpec;
+    @Getter
     private Proxy proxy;
 
     public static SpecExpressionContext create(Object... objects) {
-        SpecExpressionContext ctx = new SpecExpressionContext();
-        for (Object o : objects) {
+        var ctx = new SpecExpressionContext();
+        for (var o : objects) {
             if (o instanceof ContainerSpec) {
                 ctx.containerSpec = (ContainerSpec) o;
             } else if (o instanceof ProxySpec) {
@@ -24,15 +27,4 @@ public class SpecExpressionContext {
         return ctx;
     }
 
-    public ContainerSpec getContainerSpec() {
-        return containerSpec;
-    }
-
-    public ProxySpec getProxySpec() {
-        return proxySpec;
-    }
-
-    public Proxy getProxy() {
-        return proxy;
-    }
 }

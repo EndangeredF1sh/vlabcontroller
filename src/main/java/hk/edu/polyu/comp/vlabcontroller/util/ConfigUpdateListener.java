@@ -1,8 +1,8 @@
 package hk.edu.polyu.comp.vlabcontroller.util;
 
 import hk.edu.polyu.comp.vlabcontroller.event.ConfigUpdateEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.context.environment.EnvironmentChangeEvent;
 import org.springframework.cloud.context.refresh.ContextRefresher;
 import org.springframework.context.annotation.Configuration;
@@ -10,28 +10,23 @@ import org.springframework.context.event.EventListener;
 
 import java.security.NoSuchAlgorithmException;
 
+@Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class ConfigUpdateListener {
-    protected final Logger log = LogManager.getLogger(getClass());
-
     private final ConfigFileHelper configFileHelper;
     private final ContextRefresher contextRefresher;
 
-    public ConfigUpdateListener(ConfigFileHelper configFileHelper, ContextRefresher contextRefresher) {
-        this.configFileHelper = configFileHelper;
-        this.contextRefresher = contextRefresher;
-    }
-
     @EventListener
     public void onUpdate(ConfigUpdateEvent event) throws NoSuchAlgorithmException {
-        String hash = configFileHelper.getConfigHash();
+        var hash = configFileHelper.getConfigHash();
         if (hash.equals("unknown")) {
             log.info("No active application.yml set");
         } else if (hash.equals("illegal")) {
             log.error("application.yml syntax error");
         } else {
             log.info("Config changed, new hash = " + hash);
-            new Thread(() -> contextRefresher.refresh()).start();
+            new Thread(contextRefresher::refresh).start();
         }
     }
 

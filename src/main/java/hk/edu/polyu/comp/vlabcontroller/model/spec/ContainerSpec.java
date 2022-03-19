@@ -1,60 +1,38 @@
 package hk.edu.polyu.comp.vlabcontroller.model.spec;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.extern.log4j.Log4j2;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.util.Pair;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Log4j2
+@Slf4j
+@Data
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor
 public class ContainerSpec {
-    @Getter
-    @Setter
     private String image;
-    @Getter
-    @Setter
-    private List<String> cmd = new ArrayList<>();
-    @Getter
-    @Setter
-    private Map<String, String> env = new HashMap<>();
-    @Getter
-    @Setter
+    private String name;
+    @Singular("cmd") private List<String> cmd = new ArrayList<>();
+    @Singular("env") private Map<String, String> env = new HashMap<>();
     private String envFile;
-    @Getter
-    @Setter
     private String network;
-    @Getter
-    @Setter
-    private List<String> networkConnections = new ArrayList<>();
-    @Getter
-    @Setter
-    private List<String> dns = new ArrayList<>();
-    @Getter
-    @Setter
-    private List<EntryPointSpec> entryPoints = new ArrayList<>();
-    @Getter
-    @Setter
-    private Map<String, Integer> portMapping = new HashMap<>();
-    @Getter
-    @Setter
+    @Singular private List<String> networkConnections = new ArrayList<>();
+    @Singular("dns") private List<String> dns = new ArrayList<>();
+    @Singular private List<EntryPointSpec> entryPoints = new ArrayList<>();
+    @Singular("portMapping") private Map<String, Integer> portMapping = new HashMap<>();
     private boolean privileged;
-    @Getter
-    @Setter
-    private ResourceSpec resources = new ResourceSpec();
-    private List<VolumeMount> volumeMount;
-    @Getter
-    @Setter
-    private List<VolumeMount> volumeMounts = new ArrayList<>();
-    @Getter
-    @Setter
-    private List<VolumeMount> adminVolumeMounts = new ArrayList<>();
-    @Getter
-    @Setter
-    private Map<String, String> settings = new HashMap<>();
+    @Builder.Default private ResourceSpec resources = new ResourceSpec();
+    @Deprecated @Singular("DEPRECATED_volumeMount") private List<VolumeMount> volumeMount = new ArrayList<>();
+    @Singular private List<VolumeMount> volumeMounts = new ArrayList<>();
+    @Singular private List<VolumeMount> adminVolumeMounts = new ArrayList<>();
+    @Singular private Map<String, String> settings = new HashMap<>();
 
     /**
      * RuntimeLabels are labels which are calculated at runtime and contain metadata about the proxy.
@@ -65,8 +43,7 @@ public class ContainerSpec {
      * In practice, safe labels are saved as Kubernetes labels and non-safe labels are saved as
      * Kubernetes annotations.
      */
-    @Setter
-    private Map<String, Pair<Boolean, String>> runtimeLabels = new HashMap<>();
+    @Setter private Map<String, Pair<Boolean, String>> runtimeLabels = new HashMap<>();
 
     @JsonIgnore
     public Map<String, Pair<Boolean, String>> getRuntimeLabels() {
@@ -81,33 +58,27 @@ public class ContainerSpec {
         }
     }
 
-    @Deprecated(since="1.0.2", forRemoval = true)
+    @Deprecated(since = "1.0.2", forRemoval = true)
     public void setVolumeMount(List<VolumeMount> volumeMount) {
         log.warn("containerSpec[].volumeMount is deprecated in 1.0.2+, unavailable in 1.1+, use containerSpec[].volumeMounts instead");
         setVolumeMounts(volumeMount);
         this.volumeMount = volumeMounts;
     }
 
-    @Deprecated(since="1.0.2", forRemoval = true)
+    @Deprecated(since = "1.0.2", forRemoval = true)
     public List<VolumeMount> getVolumeMount() {
         return volumeMount;
     }
 
-    public void copy(ContainerSpec target) {
-        target.setImage(image);
-        target.getCmd().addAll(cmd);
-        target.getEnv().putAll(env);
-        target.setEnvFile(envFile);
-        target.setNetwork(network);
-        target.getNetworkConnections().addAll(networkConnections);
-        target.getDns().addAll(dns);
-        target.getEntryPoints().addAll(entryPoints);
-        target.getPortMapping().putAll(portMapping);
-        target.getPortMapping().putAll(entryPoints.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x.getPort()), EntryPointSpec::getPort)));
-        target.setResources(resources);
-        target.setPrivileged(privileged);
-        target.getVolumeMounts().addAll(volumeMounts);
-        target.getAdminVolumeMounts().addAll(adminVolumeMounts);
-        target.getSettings().putAll(settings);
+    public void populatePublicPathById(String id) {
+        var map = getEnv().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        map.put("PUBLIC_PATH", ProxyProperties.getPublicPath(id));
+        setEnv(Collections.unmodifiableMap(map));
+    }
+
+    public ContainerSpec copy() {
+        return this.toBuilder()
+            .portMapping(entryPoints.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x.getPort()), EntryPointSpec::getPort)))
+            .build();
     }
 }

@@ -3,9 +3,9 @@ package hk.edu.polyu.comp.vlabcontroller.service;
 import hk.edu.polyu.comp.vlabcontroller.log.ILogStorage;
 import hk.edu.polyu.comp.vlabcontroller.log.NoopLogStorage;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.springframework.core.env.Environment;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -16,20 +16,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class LogService {
-
     private static final String PARAM_STREAMS = "streams";
-    private final Logger log = LogManager.getLogger(LogService.class);
-    final Environment environment;
     final ILogStorage logStorage;
     private ExecutorService executor;
-    private boolean loggingEnabled;
-
-    public LogService(Environment environment, ILogStorage logStorage) {
-        this.environment = environment;
-        this.logStorage = logStorage;
-    }
+    @Getter private boolean loggingEnabled;
 
     @PostConstruct
     public void init() {
@@ -51,16 +45,12 @@ public class LogService {
         if (executor != null) executor.shutdown();
     }
 
-    public boolean isLoggingEnabled() {
-        return loggingEnabled;
-    }
-
     public void attachToOutput(Proxy proxy, BiConsumer<OutputStream, OutputStream> outputAttacher) {
         if (!isLoggingEnabled()) return;
 
         executor.submit(() -> {
             try {
-                OutputStream[] streams = logStorage.createOutputStreams(proxy);
+                var streams = logStorage.createOutputStreams(proxy);
                 if (streams == null || streams.length < 2) {
                     log.error("Failed to attach logging of proxy " + proxy.getId() + ": no output streams defined");
                 } else {
@@ -79,15 +69,15 @@ public class LogService {
     public void detach(Proxy proxy) {
         if (!isLoggingEnabled()) return;
 
-        OutputStream[] streams = (OutputStream[]) proxy.getContainerGroup().getParameters().get(PARAM_STREAMS);
+        var streams = (OutputStream[]) proxy.getContainerGroup().getParameters().get(PARAM_STREAMS);
         if (streams == null || streams.length < 2) {
             log.warn("Cannot detach container logging: streams not found");
             return;
         }
-        for (int i = 0; i < streams.length; i++) {
+        for (OutputStream stream : streams) {
             try {
-                streams[i].flush();
-                streams[i].close();
+                stream.flush();
+                stream.close();
             } catch (IOException e) {
                 log.error("Failed to close container logging streams", e);
             }

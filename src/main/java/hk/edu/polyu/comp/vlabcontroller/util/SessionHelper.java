@@ -1,12 +1,11 @@
 package hk.edu.polyu.comp.vlabcontroller.util;
 
+import hk.edu.polyu.comp.vlabcontroller.config.ServerProperties;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.util.HeaderValues;
-import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.AuthenticatedPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 
 import javax.servlet.http.HttpSession;
@@ -21,13 +20,13 @@ public class SessionHelper {
      * @return The current session ID, or null if no session is active.
      */
     public static String getCurrentSessionId(boolean createIfMissing) {
-        ServletRequestContext context = ServletRequestContext.current();
+        var context = ServletRequestContext.current();
         if (context == null) return null;
 
         HttpSession session = context.getSession();
         if (session != null) return session.getId();
 
-        Cookie jSessionIdCookie = context.getExchange().getRequestCookies().get("JSESSIONID");
+        var jSessionIdCookie = context.getExchange().getRequestCookie("JSESSIONID");
         if (jSessionIdCookie != null) return jSessionIdCookie.getValue();
 
         if (createIfMissing) return context.getCurrentServletContext().getSession(context.getExchange(), true).getId();
@@ -37,13 +36,13 @@ public class SessionHelper {
     /**
      * Get the context path that has been configured for this instance.
      *
-     * @param environment  The Spring environment containing the context-path setting.
+     * @param serverProperties  The Spring configuration properties that resolves context-path
      * @param endWithSlash True to always end the context path with a slash.
      * @return The instance's context path, may be empty, never null.
      */
-    public static String getContextPath(Environment environment, boolean endWithSlash) {
-        String contextPath = environment.getProperty("server.servlet.context-path");
-        if (contextPath == null || contextPath.trim().equals("/") || contextPath.trim().isEmpty())
+    public static String getContextPath(ServerProperties serverProperties, boolean endWithSlash) {
+        var contextPath = serverProperties.getServletContextPath();
+        if (contextPath == null || contextPath.isBlank() || contextPath.trim().equals("/"))
             return endWithSlash ? "/" : "";
 
         if (!contextPath.startsWith("/")) contextPath = "/" + contextPath;
@@ -65,23 +64,23 @@ public class SessionHelper {
      * @return An object containing information about the current user.
      */
     public static SessionOwnerInfo createOwnerInfo(HttpServerExchange exchange) {
-        SessionOwnerInfo info = new SessionOwnerInfo();
+        var info = new SessionOwnerInfo();
 
         // Ideally, use the HTTP session information.
         info.principal = Optional.ofNullable(ServletRequestContext.current())
-                .map(ctx -> ctx.getSession())
+                .map(ServletRequestContext::getSession)
                 .map(session -> (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT"))
-                .map(ctx -> ctx.getAuthentication())
+                .map(SecurityContext::getAuthentication)
                 .filter(auth -> !(auth instanceof AnonymousAuthenticationToken))
-                .map(auth -> auth.getPrincipal())
+                .map(Authentication::getPrincipal)
                 .orElse(null);
 
         // Fallback: use the Authorization header, if present.
-        HeaderValues authHeader = exchange.getRequestHeaders().get("Authorization");
+        var authHeader = exchange.getRequestHeaders().get("Authorization");
         if (authHeader != null) info.authHeader = authHeader.getFirst();
 
         // Fallback: use the JSESSIONID cookie, if present.
-        Cookie jSessionIdCookie = exchange.getRequestCookies().get("JSESSIONID");
+        var jSessionIdCookie = exchange.getRequestCookie("JSESSIONID");
         if (jSessionIdCookie != null) info.jSessionId = jSessionIdCookie.getValue();
 
         // Final fallback: generate a JSESSIONID for this exchange.

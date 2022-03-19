@@ -2,11 +2,10 @@ package hk.edu.polyu.comp.vlabcontroller.auth.impl;
 
 import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
 import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
+import lombok.RequiredArgsConstructor;
 import org.keycloak.adapters.AdapterDeploymentContext;
-import org.keycloak.adapters.KeycloakConfigResolver;
-import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.adapters.KeycloakDeploymentBuilder;
-import org.keycloak.adapters.spi.HttpFacade.Request;
 import org.keycloak.adapters.spi.KeycloakAccount;
 import org.keycloak.adapters.springsecurity.AdapterDeploymentContextFactoryBean;
 import org.keycloak.adapters.springsecurity.account.KeycloakRole;
@@ -21,10 +20,10 @@ import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.keycloak.representations.IDToken;
 import org.keycloak.representations.adapters.config.AdapterConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -49,27 +48,23 @@ import org.springframework.stereotype.Component;
 
 import javax.servlet.ServletException;
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static io.vavr.API.*;
 @Component
+@RequiredArgsConstructor(onConstructor_ = {@Lazy})
+@RefreshScope
 public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
 
     public static final String NAME = "keycloak";
 
-    final Environment environment;
+    final ProxyProperties proxyProperties;
     final WebSecurityConfigurerAdapter webSecurityConfigurerAdapter;
     final ApplicationContext ctx;
     final AuthenticationManager authenticationManager;
-
-
-    @Lazy
-    public KeycloakAuthenticationBackend(Environment environment, WebSecurityConfigurerAdapter webSecurityConfigurerAdapter, ApplicationContext ctx, AuthenticationManager authenticationManager) {
-        this.environment = environment;
-        this.webSecurityConfigurerAdapter = webSecurityConfigurerAdapter;
-        this.ctx = ctx;
-        this.authenticationManager = authenticationManager;
-    }
 
     @Override
     public String getName() {
@@ -118,7 +113,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
                         new RequestHeaderRequestMatcher(KeycloakAuthenticationProcessingFilter.AUTHORIZATION_HEADER)
                 );
 
-        KeycloakAuthenticationProcessingFilter filter = new KeycloakAuthenticationProcessingFilter(authenticationManager, requestMatcher);
+        var filter = new KeycloakAuthenticationProcessingFilter(authenticationManager, requestMatcher);
         filter.setSessionAuthenticationStrategy(sessionAuthenticationStrategy());
         filter.setAuthenticationFailureHandler(keycloakAuthenticationFailureHandler());
         // Fix: call afterPropertiesSet manually, because Spring doesn't invoke it for some reason.
@@ -130,7 +125,7 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @Bean
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     protected KeycloakPreAuthActionsFilter keycloakPreAuthActionsFilter() {
-        KeycloakPreAuthActionsFilter filter = new KeycloakPreAuthActionsFilter(httpSessionManager());
+        var filter = new KeycloakPreAuthActionsFilter(httpSessionManager());
         // Fix: call afterPropertiesSet manually, because Spring doesn't invoke it for some reason.
         filter.setApplicationContext(ctx);
         try {
@@ -164,22 +159,17 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
     @Bean
     @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
     protected AdapterDeploymentContext adapterDeploymentContext() throws Exception {
-        AdapterConfig cfg = new AdapterConfig();
-        cfg.setRealm(environment.getProperty("proxy.keycloak.realm"));
-        cfg.setAuthServerUrl(environment.getProperty("proxy.keycloak.auth-server-url"));
-        cfg.setResource(environment.getProperty("proxy.keycloak.resource"));
-        cfg.setSslRequired(environment.getProperty("proxy.keycloak.ssl-required", "external"));
-        cfg.setUseResourceRoleMappings(Boolean.parseBoolean(environment.getProperty("proxy.keycloak.use-resource-role-mappings", "false")));
-        Map<String, Object> credentials = new HashMap<>();
-        credentials.put("secret", environment.getProperty("proxy.keycloak.credentials-secret"));
-        cfg.setCredentials(credentials);
-        KeycloakDeployment dep = KeycloakDeploymentBuilder.build(cfg);
-        AdapterDeploymentContextFactoryBean factoryBean = new AdapterDeploymentContextFactoryBean(new KeycloakConfigResolver() {
-            @Override
-            public KeycloakDeployment resolve(Request facade) {
-                return dep;
-            }
-        });
+        var cfg = new AdapterConfig();
+        var keycloak = proxyProperties.getKeycloak();
+
+        cfg.setRealm(keycloak.getRealm());
+        cfg.setAuthServerUrl(keycloak.getAuthServerUrl());
+        cfg.setResource(keycloak.getResource());
+        cfg.setSslRequired(keycloak.getSslRequired());
+        cfg.setUseResourceRoleMappings(keycloak.isUseResourceRoleMappings());
+        cfg.setCredentials(Map.of("secret", keycloak.getCredentialsSecret()));
+        var dep = KeycloakDeploymentBuilder.build(cfg);
+        var factoryBean = new AdapterDeploymentContextFactoryBean(facade -> dep);
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
     }
@@ -192,13 +182,13 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
         return new KeycloakAuthenticationProvider() {
             @Override
             public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-                KeycloakAuthenticationToken token = (KeycloakAuthenticationToken) super.authenticate(authentication);
+                var token = (KeycloakAuthenticationToken) super.authenticate(authentication);
                 List<GrantedAuthority> auth = token.getAuthorities().stream()
-                        .map(t -> t.getAuthority().toUpperCase())
-                        .map(a -> a.startsWith("ROLE_") ? a : "ROLE_" + a)
-                        .map(KeycloakRole::new)
-                        .collect(Collectors.toList());
-                String nameAttribute = environment.getProperty("proxy.keycloak.name-attribute", IDToken.NAME).toLowerCase();
+                    .map(t -> t.getAuthority().toUpperCase())
+                    .map(a -> a.startsWith("ROLE_") ? a : "ROLE_" + a)
+                    .map(KeycloakRole::new)
+                    .collect(Collectors.toList());
+                var nameAttribute = proxyProperties.getKeycloak().getNameAttribute().toLowerCase();
                 return new KeycloakAuthenticationToken2(token.getAccount(), token.isInteractive(), nameAttribute, auth);
             }
         };
@@ -221,20 +211,14 @@ public class KeycloakAuthenticationBackend implements IAuthenticationBackend {
 
         @Override
         public String getName() {
-            IDToken token = getAccount().getKeycloakSecurityContext().getIdToken();
-            if (token == null) {
-                token = getAccount().getKeycloakSecurityContext().getToken();
-            }
-            switch (nameAttribute) {
-                case IDToken.PREFERRED_USERNAME:
-                    return token.getPreferredUsername();
-                case IDToken.NICKNAME:
-                    return token.getNickName();
-                case IDToken.EMAIL:
-                    return token.getEmail();
-                default:
-                    return token.getName();
-            }
+            var ctx = getAccount().getKeycloakSecurityContext();
+            var token = Optional.ofNullable(ctx.getIdToken()).orElseGet(ctx::getToken);
+            return Match(nameAttribute).of(
+                Case($(IDToken.PREFERRED_USERNAME), token::getPreferredUsername),
+                Case($(IDToken.NICKNAME), token::getNickName),
+                Case($(IDToken.EMAIL), token::getEmail),
+                Case($(), token::getName)
+            );
         }
     }
 }

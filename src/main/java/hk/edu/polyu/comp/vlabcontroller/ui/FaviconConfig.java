@@ -1,11 +1,13 @@
 package hk.edu.polyu.comp.vlabcontroller.ui;
 
-import org.apache.logging.log4j.LogManager;
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
-import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.util.FileCopyUtils;
@@ -16,40 +18,36 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 
+@Slf4j
 @Configuration
+@RequiredArgsConstructor
+@RefreshScope
 public class FaviconConfig {
-
     private static final String CONTENT_TYPE_ICO = "image/x-icon";
-
-    private final Environment environment;
-
-    public FaviconConfig(Environment environment) {
-        this.environment = environment;
-    }
+    private final ProxyProperties proxyProperties;
 
     @Bean
     @ConditionalOnProperty(name = "proxy.favicon-path")
     public SimpleUrlHandlerMapping customFaviconHandlerMapping() {
         byte[] cachedIcon = null;
 
-        Path iconPath = Paths.get(environment.getProperty("proxy.favicon-path"));
+        var iconPath = Paths.get(proxyProperties.getFaviconPath());
         if (Files.isRegularFile(iconPath)) {
-            try (InputStream input = Files.newInputStream(iconPath)) {
+            try (var input = Files.newInputStream(iconPath)) {
                 cachedIcon = FileCopyUtils.copyToByteArray(input);
             } catch (IOException e) {
                 throw new IllegalArgumentException("Cannot read favicon: " + iconPath, e);
             }
         } else {
-            LogManager.getLogger(FaviconConfig.class).error("Invalid favicon path: " + iconPath);
+            log.error("Invalid favicon path: " + iconPath);
         }
 
-        SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
+        var mapping = new SimpleUrlHandlerMapping();
         mapping.setOrder(Ordered.HIGHEST_PRECEDENCE);
         mapping.setUrlMap(Collections.singletonMap("**/favicon.???", new CachedFaviconHttpRequestHandler(cachedIcon, iconPath)));
         return mapping;
@@ -75,10 +73,10 @@ public class FaviconConfig {
         }
 
         private String getContentType() {
-            String fileName = iconPath.getFileName().toString().toLowerCase();
+            var fileName = iconPath.getFileName().toString().toLowerCase();
             if (fileName.endsWith(".ico")) return CONTENT_TYPE_ICO;
 
-            MediaType mediaType = MediaTypeFactory.getMediaType(fileName).orElse(MediaType.APPLICATION_OCTET_STREAM);
+            var mediaType = MediaTypeFactory.getMediaType(fileName).orElse(MediaType.APPLICATION_OCTET_STREAM);
             return mediaType.toString();
         }
     }

@@ -1,13 +1,10 @@
 package hk.edu.polyu.comp.vlabcontroller.model.runtime;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Builder;
+import lombok.Data;
 
+@Data @Builder(toBuilder = true)
 public class RuntimeSetting {
-    @Getter
-    @Setter
     private String name;
-    @Getter
-    @Setter
     private Object value;
 }

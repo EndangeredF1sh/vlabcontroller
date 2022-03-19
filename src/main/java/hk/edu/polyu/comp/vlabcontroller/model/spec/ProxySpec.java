@@ -1,8 +1,6 @@
 package hk.edu.polyu.comp.vlabcontroller.model.spec;
 
-import hk.edu.polyu.comp.vlabcontroller.spec.impl.DefaultSpecProvider;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,72 +8,81 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Data
+@Builder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProxySpec {
-    @Getter
-    @Setter
     private String id;
-    @Getter
-    @Setter
     private String displayName;
-    @Getter
-    @Setter
     private String description;
-    @Getter
-    @Setter
     private String logoURL;
-    @Getter
-    @Setter
-    private List<String> accessGroups = new ArrayList<>();
-    @Getter
-    private List<ContainerSpec> containerSpecs = new ArrayList<>();
-    @Getter
-    @Setter
-    private List<RuntimeSettingSpec> runtimeSettingSpecs = new ArrayList<>();
-    @Getter
-    @Setter
-    private Map<String, String> labels = new HashMap<>();
-    @Getter
-    private Map<String, Object> settings = new HashMap<>();
-    @Getter
-    @Setter
-    private ProxySpecKubernetes kubernetes = new ProxySpecKubernetes();
-    @Getter
-    @Setter
+    @Singular private List<String> tags = new ArrayList<>();
+    @Singular private List<String> accessGroups = new ArrayList<>();
+    @Singular private List<ContainerSpec> containerSpecs = new ArrayList<>();
+    @Singular private List<RuntimeSettingSpec> runtimeSettingSpecs = new ArrayList<>();
+    @Singular private Map<String, String> labels = new HashMap<>();
+    @Setter(AccessLevel.PACKAGE) @Singular private Map<String, Object> settings = new HashMap<>();
+    @Builder.Default private ProxySpecKubernetes kubernetes = new ProxySpecKubernetes();
+    private boolean isSecure;
     private String defaultTutorialLink;
+    private EvaluatorSpec evaluator;
 
     public void setContainerSpecs(List<ContainerSpec> containerSpecs) {
         this.containerSpecs = containerSpecs;
-        var entryPoints = containerSpecs.stream().flatMap(x -> x.getEntryPoints().stream()).collect(Collectors.toList());
+        var entryPoints = containerSpecs.stream().filter(x -> x.getEntryPoints() != null).flatMap(x -> x.getEntryPoints().stream()).collect(Collectors.toList());
         settings.put("entrypoint", entryPoints);
     }
 
-    public void copy(ProxySpec target) {
-        target.setId(id);
-        target.setDisplayName(displayName);
-        target.setDescription(description);
-        target.setLogoURL(logoURL);
-        target.setDefaultTutorialLink(defaultTutorialLink);
-
-        target.getAccessGroups().addAll(accessGroups);
-
-        for (ContainerSpec spec : containerSpecs) {
-            ContainerSpec copy = new ContainerSpec();
-            spec.copy(copy);
-            copy.getEnv().put("PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
-            target.getContainerSpecs().add(copy);
-        }
-
-        for (RuntimeSettingSpec spec : runtimeSettingSpecs) {
-            RuntimeSettingSpec copy = new RuntimeSettingSpec();
-            spec.copy(copy);
-            target.getRuntimeSettingSpecs().add(copy);
-        }
-
-        target.getLabels().putAll(labels);
-        target.getSettings().putAll(settings);
-        ProxySpecKubernetes proxySpecKubernetesCopy = new ProxySpecKubernetes();
-        kubernetes.copy(proxySpecKubernetesCopy);
-        target.setKubernetes(proxySpecKubernetesCopy);
+    public void populateContainerSpecPublicPathById() {
+        containerSpecs.forEach(x -> x.populatePublicPathById(id));
     }
 
+    public ProxySpecBuilder copyToBuilder(ProxySpecBuilder builder) {
+        var self = this.copy();
+        self.kubernetes = self.kubernetes.copy();
+
+        return builder
+            .clearContainerSpecs()
+            .clearRuntimeSettingSpecs()
+            .id(id)
+            .displayName(displayName)
+            .description(description)
+            .logoURL(logoURL)
+            .accessGroups(accessGroups)
+            .containerSpecs(
+                self.containerSpecs.stream()
+                    .peek(x -> x.populatePublicPathById(builder.id))
+                    .collect(Collectors.toList())
+            )
+//            .runtimeSettingSpecs(self.runtimeSettingSpecs)
+            .labels(labels)
+            .settings(settings)
+            .kubernetes(self.kubernetes)
+            .defaultTutorialLink(defaultTutorialLink)
+            .tags(tags)
+        ;
+    }
+
+    public ProxySpecBuilder copyBuilder() {
+        return this.toBuilder()
+            .clearContainerSpecs()
+            .clearRuntimeSettingSpecs()
+            .containerSpecs(
+                containerSpecs.stream()
+                    .map(ContainerSpec::copy)
+                    .peek(x -> x.populatePublicPathById(id))
+                    .collect(Collectors.toList())
+            )
+//            .runtimeSettingSpecs(
+//                runtimeSettingSpecs.stream()
+//                    .map(RuntimeSettingSpec::copy)
+//                    .collect(Collectors.toList())
+//            )
+            .kubernetes(kubernetes.copy());
+    }
+
+    public ProxySpec copy() {
+        return copyBuilder().build();
+    }
 }

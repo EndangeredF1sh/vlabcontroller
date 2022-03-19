@@ -1,10 +1,5 @@
 package hk.edu.polyu.comp.vlabcontroller.stat.impl;
 
-import org.apache.commons.io.IOUtils;
-import org.springframework.core.env.Environment;
-
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -19,39 +14,33 @@ import java.util.Optional;
  * usage-stats-url: http://localhost:8086/write?db=usagestats
  */
 public class InfluxDBCollector extends AbstractDbCollector {
-
-    private String destination;
-    @Inject
-    private Environment environment;
-
-    @PostConstruct
-    public void init() {
-        destination = environment.getProperty("proxy.usage-stats-url.influx-url");
+    public String getDestination() {
+        return proxyProperties.getUsageStats().getUrl().getInflux();
     }
 
     @Override
     protected void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException {
-        String identifier = environment.getProperty("proxy.identifier-value", "default-identifier");
-        String body = String.format("event,username=%s,type=%s,identifier=%s specid=\"%s\",info=\"%s\"",
+        var identifier = proxyProperties.getIdentifierValue();
+        var body = String.format("event,username=%s,type=%s,identifier=%s specid=\"%s\",info=\"%s\"",
                 userId.replace(" ", "\\ "),
                 type.replace(" ", "\\ "),
                 identifier.replace(" ", "\\ "),
                 Optional.ofNullable(specId).orElse(""),
                 Optional.ofNullable(info).orElse(""));
 
-        HttpURLConnection conn = (HttpURLConnection) new URL(destination).openConnection();
+        var conn = (HttpURLConnection) new URL(getDestination()).openConnection();
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
-        try (DataOutputStream dos = new DataOutputStream(conn.getOutputStream())) {
+        try (var dos = new DataOutputStream(conn.getOutputStream())) {
             dos.write(body.getBytes(StandardCharsets.UTF_8));
             dos.flush();
         }
-        int responseCode = conn.getResponseCode();
+        var responseCode = conn.getResponseCode();
         if (responseCode == 204) {
             // All is well.
         } else {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOUtils.copy(conn.getErrorStream(), bos);
+            var bos = new ByteArrayOutputStream();
+            conn.getErrorStream().transferTo(bos);
             throw new IOException(bos.toString());
         }
     }

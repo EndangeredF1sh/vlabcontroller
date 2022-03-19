@@ -1,28 +1,20 @@
 package hk.edu.polyu.comp.vlabcontroller.model.spec;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Data
+@Builder(toBuilder = true)
+@AllArgsConstructor
+@NoArgsConstructor
 public class RuntimeSettingSpec {
-    @Getter
-    @Setter
     private String name;
-    @Getter
-    @Setter
     private String type;
-    @Getter
-    @Setter
-    private Map<String, Object> config;
+    @Singular("config") private Map<String, Object> config = new HashMap<>();
 
-    public void copy(RuntimeSettingSpec target) {
-        target.setName(name);
-        target.setType(type);
-        if (config != null) {
-            if (target.getConfig() == null) target.setConfig(new HashMap<>());
-            target.getConfig().putAll(config);
-        }
+    public RuntimeSettingSpec copy() {
+        return this.toBuilder().build();
     }
 }

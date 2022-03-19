@@ -19,10 +19,7 @@ public class VLabControllerSpecMergeStrategy implements IProxySpecMergeStrategy 
         if (runtimeSpec != null) throw new ProxySpecException("Runtime proxy specs are not allowed");
         if (runtimeSettings != null && !runtimeSettings.isEmpty())
             throw new ProxySpecException("Runtime proxy settings are not allowed");
-
-        ProxySpec finalSpec = new ProxySpec();
-        baseSpec.copy(finalSpec);
-        return finalSpec;
+        return baseSpec.copy();
     }
 
 }

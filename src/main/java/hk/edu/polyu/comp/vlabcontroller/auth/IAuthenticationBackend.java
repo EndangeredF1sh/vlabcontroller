@@ -1,12 +1,14 @@
 package hk.edu.polyu.comp.vlabcontroller.auth;
 
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ContainerSpec;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer.AuthorizedUrl;
 
-import java.util.List;
+import java.util.Map;
 
+@RefreshScope
 public interface IAuthenticationBackend {
 
     /**
@@ -46,7 +48,7 @@ public interface IAuthenticationBackend {
         // Default: do nothing.
     }
 
-    default void customizeContainerEnv(List<String> env) {
+    default void customizeContainerEnv(Map<String, String> env) {
         // Default: do nothing.
     }
 

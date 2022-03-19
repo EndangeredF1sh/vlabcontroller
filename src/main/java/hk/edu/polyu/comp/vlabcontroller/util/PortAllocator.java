@@ -1,9 +1,9 @@
 package hk.edu.polyu.comp.vlabcontroller.util;
 
 import hk.edu.polyu.comp.vlabcontroller.VLabControllerException;
+import lombok.Synchronized;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class PortAllocator {
 
@@ -18,12 +18,12 @@ public class PortAllocator {
     }
 
     public int allocate(String ownerId) {
-        int nextPort = range[0];
+        var nextPort = range[0];
         while (occupiedPorts.contains(nextPort)) nextPort++;
 
         if (range[1] > 0 && nextPort > range[1]) {
             throw new VLabControllerException("Cannot create container: all allocated ports are currently in use."
-                    + " Please try again later or contact an administrator.");
+                + " Please try again later or contact an administrator.");
         }
 
         occupiedPorts.add(nextPort);
@@ -36,16 +36,10 @@ public class PortAllocator {
         occupiedPortOwners.remove(port);
     }
 
+    @Synchronized("occupiedPortOwners")
     public void release(String ownerId) {
-        synchronized (occupiedPortOwners) {
-            Set<Integer> portsToRelease = occupiedPortOwners.entrySet().stream()
-                    .filter(e -> e.getValue().equals(ownerId))
-                    .map(e -> e.getKey())
-                    .collect(Collectors.toSet());
-            for (Integer port : portsToRelease) {
-                occupiedPorts.remove(port);
-                occupiedPortOwners.remove(port);
-            }
-        }
+        occupiedPortOwners.entrySet().stream()
+            .filter(e -> e.getValue().equals(ownerId))
+            .map(Map.Entry::getKey).distinct().forEach(this::release);
     }
 }

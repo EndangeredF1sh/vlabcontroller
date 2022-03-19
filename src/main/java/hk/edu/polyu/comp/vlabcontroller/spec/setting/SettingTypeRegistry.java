@@ -4,6 +4,7 @@ import hk.edu.polyu.comp.vlabcontroller.model.runtime.RuntimeSetting;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.RuntimeSettingSpec;
 import hk.edu.polyu.comp.vlabcontroller.spec.ProxySpecException;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,8 +23,7 @@ import java.util.Map;
  */
 @Component
 public class SettingTypeRegistry {
-
-    @Autowired(required = false)
+    @Setter(onMethod_ = {@Autowired(required = false)})
     private Map<String, IRuntimeSettingType> typeMap = new HashMap<>();
 
     public RuntimeSettingSpec resolveSpec(RuntimeSetting setting, ProxySpec proxySpec) {
@@ -31,7 +31,7 @@ public class SettingTypeRegistry {
     }
 
     public IRuntimeSettingType resolveSpecType(RuntimeSettingSpec settingSpec) {
-        String type = settingSpec.getType();
+        var type = settingSpec.getType();
         if (type == null || type.isEmpty()) {
             //TODO try to determine the type via the spec config
             type = "setting.type.string";
@@ -40,10 +40,10 @@ public class SettingTypeRegistry {
     }
 
     public void applySetting(RuntimeSetting setting, ProxySpec targetSpec) throws ProxySpecException {
-        RuntimeSettingSpec settingSpec = resolveSpec(setting, targetSpec);
+        var settingSpec = resolveSpec(setting, targetSpec);
         if (settingSpec == null) return;
 
-        IRuntimeSettingType type = resolveSpecType(settingSpec);
+        var type = resolveSpecType(settingSpec);
         if (type == null) throw new ProxySpecException("Unknown setting type: " + settingSpec.getType());
 
         type.apply(setting, settingSpec, targetSpec);

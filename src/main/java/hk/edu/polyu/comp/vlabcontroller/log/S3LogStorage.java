@@ -7,20 +7,17 @@ import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.util.Arrays;
 
 import java.io.*;
 
 //TODO Optimize flushing behaviour
+@Slf4j
 public class S3LogStorage extends AbstractLogStorage {
-
-    private final Logger log = LogManager.getLogger(S3LogStorage.class);
     private AmazonS3 s3;
     private TransferManager transferMgr;
     private String bucketName;
@@ -31,15 +28,15 @@ public class S3LogStorage extends AbstractLogStorage {
     public void initialize() throws IOException {
         super.initialize();
 
-        String accessKey = environment.getProperty("proxy.container-log-s3-access-key");
-        String accessSecret = environment.getProperty("proxy.container-log-s3-access-secret");
-        String endpoint = environment.getProperty("proxy.container-log-s3-endpoint", "https://s3-eu-west-1.amazonaws.com");
-        enableSSE = Boolean.valueOf(environment.getProperty("proxy.container-log-s3-sse", "false"));
+        var accessKey = proxyProperties.getContainerLogS3AccessKey();
+        var accessSecret = proxyProperties.getContainerLogS3AccessSecret();
+        var endpoint = proxyProperties.getContainerLogS3Endpoint();
+        enableSSE = proxyProperties.isContainerLogS3SSE();
 
-        String subPath = containerLogPath.substring("s3://".length()).trim();
+        var subPath = containerLogPath.substring("s3://".length()).trim();
         if (subPath.endsWith("/")) subPath = subPath.substring(0, subPath.length() - 1);
 
-        int bucketPathIndex = subPath.indexOf("/");
+        var bucketPathIndex = subPath.indexOf("/");
         if (bucketPathIndex == -1) {
             bucketName = subPath;
             bucketPath = "";
@@ -60,10 +57,10 @@ public class S3LogStorage extends AbstractLogStorage {
 
     @Override
     public OutputStream[] createOutputStreams(Proxy proxy) throws IOException {
-        String[] paths = getLogs(proxy);
-        OutputStream[] streams = new OutputStream[2];
-        for (int i = 0; i < streams.length; i++) {
-            String fileName = paths[i].substring(paths[i].lastIndexOf("/") + 1);
+        var paths = getLogs(proxy);
+        var streams = new OutputStream[2];
+        for (var i = 0; i < streams.length; i++) {
+            var fileName = paths[i].substring(paths[i].lastIndexOf("/") + 1);
             // TODO kubernetes never flushes. So perform timed flushes, and also flush upon container shutdown
             streams[i] = new BufferedOutputStream(new S3OutputStream(bucketPath + fileName), 1024 * 1024);
         }
@@ -71,15 +68,15 @@ public class S3LogStorage extends AbstractLogStorage {
     }
 
     private void doUpload(String key, byte[] bytes) throws IOException {
-        byte[] bytesToUpload = bytes;
+        var bytesToUpload = bytes;
 
-        byte[] originalBytes = getContent(key);
+        var originalBytes = getContent(key);
         if (originalBytes != null) {
             bytesToUpload = Arrays.copyOf(originalBytes, originalBytes.length + bytes.length);
             System.arraycopy(bytes, 0, bytesToUpload, originalBytes.length, bytes.length);
         }
 
-        ObjectMetadata metadata = new ObjectMetadata();
+        var metadata = new ObjectMetadata();
         metadata.setContentLength(bytesToUpload.length);
         if (enableSSE) metadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 
@@ -96,11 +93,11 @@ public class S3LogStorage extends AbstractLogStorage {
 
     private byte[] getContent(String key) throws IOException {
         if (s3.doesObjectExist(bucketName, key)) {
-            S3Object o = s3.getObject(bucketName, key);
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            var o = s3.getObject(bucketName, key);
+            var out = new ByteArrayOutputStream();
             try (InputStream in = o.getObjectContent()) {
-                byte[] buffer = new byte[40 * 1024];
-                int len = 0;
+                var buffer = new byte[40 * 1024];
+                var len = 0;
                 while ((len = in.read(buffer)) > 0) {
                     out.write(buffer, 0, len);
                 }
@@ -122,13 +119,13 @@ public class S3LogStorage extends AbstractLogStorage {
         @Override
         public void write(int b) throws IOException {
             // Warning: highly inefficient. Always write arrays.
-            byte[] bytesToCopy = new byte[]{(byte) b};
+            var bytesToCopy = new byte[]{(byte) b};
             write(bytesToCopy, 0, 1);
         }
 
         @Override
         public void write(byte[] b, int off, int len) throws IOException {
-            byte[] bytesToCopy = new byte[len];
+            var bytesToCopy = new byte[len];
             System.arraycopy(b, off, bytesToCopy, 0, len);
             doUpload(s3Key, bytesToCopy);
         }

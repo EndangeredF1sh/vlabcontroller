@@ -1,14 +1,13 @@
 package hk.edu.polyu.comp.vlabcontroller.spec.expression;
 
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
-import hk.edu.polyu.comp.vlabcontroller.model.spec.EntryPointSpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ContainerSpec;
+import hk.edu.polyu.comp.vlabcontroller.model.spec.EntryPointSpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ResourceSpec;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import org.springframework.data.util.Pair;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,9 +42,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     }
 
     public Map<String, String> getEnv() {
-        Map<String, String> env = new HashMap<>();
-        source.getEnv().entrySet().stream().forEach(e -> env.put(e.getKey(), resolve(e.getValue())));
-        return env;
+        return source.getEnv().entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, x -> resolve(x.getValue())));
     }
 
     public String getEnvFile() {
@@ -74,10 +72,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
 
     @Override
     public ResourceSpec getResources() {
-        ResourceSpec resourceSpec = new ResourceSpec();
-        source.getResources().getLimits().forEach((key, value) -> resourceSpec.getLimits().put(key, resolve(value)));
-        source.getResources().getRequests().forEach((key, value) -> resourceSpec.getRequests().put(key, resolve(value)));
-        return resourceSpec;
+        var resources = source.getResources();
+        return ResourceSpec.builder().limits(resources.getLimits()).requests(resources.getRequests()).build();
     }
 
     public boolean isPrivileged() {
@@ -91,9 +87,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
     }
 
     public Map<String, String> getSettings() {
-        Map<String, String> settings = new HashMap<>();
-        source.getSettings().entrySet().stream().forEach(e -> settings.put(e.getKey(), resolve(e.getValue())));
-        return settings;
+        return source.getSettings().entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, x -> resolve(x.getValue())));
     }
 
     public List<VolumeMount> getVolumeMounts() {

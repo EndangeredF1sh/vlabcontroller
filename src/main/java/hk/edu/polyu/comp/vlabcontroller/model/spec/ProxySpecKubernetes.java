@@ -2,30 +2,32 @@ package hk.edu.polyu.comp.vlabcontroller.model.spec;
 
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Volume;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Data @Builder(toBuilder = true)
+@AllArgsConstructor @NoArgsConstructor
 public class ProxySpecKubernetes {
-    @Getter
-    @Setter
-    private List<Volume> volumes = new ArrayList<>();
-    @Getter
-    @Setter
+    @Singular private List<Volume> volumes = new ArrayList<>();
     private String podPatches;
-    @Getter
-    @Setter
-    private List<String> additionalManifests = new ArrayList<>();
-    @Getter
-    @Setter
-    private List<PersistentVolumeClaim> persistentVolumeClaims = new ArrayList<>();
+    @Singular private List<String> additionalManifests = new ArrayList<>();
+    @Singular private List<PersistentVolumeClaim> persistentVolumeClaims = new ArrayList<>();
 
-    public void copy(ProxySpecKubernetes target){
-        target.getVolumes().addAll(volumes);
-        target.setPodPatches(podPatches);
-        target.getAdditionalManifests().addAll(additionalManifests);
-        target.getPersistentVolumeClaims().addAll(persistentVolumeClaims);
+    public ProxySpecKubernetesBuilder copyToBuilder(ProxySpecKubernetesBuilder builder) {
+        return builder
+            .volumes(volumes)
+            .podPatches(podPatches)
+            .additionalManifests(additionalManifests)
+            .persistentVolumeClaims(persistentVolumeClaims);
+    }
+
+    public ProxySpecKubernetesBuilder copyBuilder() {
+        return this.toBuilder();
+    }
+
+    public ProxySpecKubernetes copy() {
+        return copyBuilder().build();
     }
 }

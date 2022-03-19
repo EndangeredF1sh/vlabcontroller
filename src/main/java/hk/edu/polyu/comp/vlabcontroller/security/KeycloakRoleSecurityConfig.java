@@ -1,24 +1,22 @@
 package hk.edu.polyu.comp.vlabcontroller.security;
 
 import com.google.common.base.Strings;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 
+@Slf4j
 @Configuration
 @ConditionalOnProperty(name = "proxy.authentication", havingValue = "keycloak")
+@RequiredArgsConstructor
+@RefreshScope
 public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig {
-    private final Logger log = LogManager.getLogger(getClass());
-
-    final Environment environment;
-
-    public KeycloakRoleSecurityConfig(Environment environment) {
-        this.environment = environment;
-    }
+    private final ProxyProperties proxyProperties;
 
     @Override
     public void apply(WebSecurity web) throws Exception {
@@ -28,8 +26,8 @@ public class KeycloakRoleSecurityConfig implements ICustomSecurityConfig {
     @Override
     public void apply(HttpSecurity http) throws Exception {
         ICustomSecurityConfig.super.apply(http);
-        String[] uriArray = new String[]{"/api/**", "/app/**", "/app_direct/**", "/filebrowser", "/controlpanel", environment.getProperty("proxy.landing-page")};
-        String role = environment.getProperty("proxy.allowed-role");
+        var uriArray = new String[]{"/api/**", "/app/**", "/app_direct/**", "/filebrowser", "/controlpanel",  proxyProperties.getLandingPage()};
+        var role = proxyProperties.getAllowedRole();
         if (!Strings.isNullOrEmpty(role)) {
             log.info("Enable allowed roles mode");
             http.authorizeRequests().antMatchers("/").anonymous();

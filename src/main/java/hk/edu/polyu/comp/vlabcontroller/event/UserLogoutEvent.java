@@ -1,14 +1,17 @@
 package hk.edu.polyu.comp.vlabcontroller.event;
 
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 import org.springframework.context.ApplicationEvent;
 
+@Getter
+@ToString
+@EqualsAndHashCode(callSuper = false)
 public class UserLogoutEvent extends ApplicationEvent {
-    @Getter
     private final String userId;
-    @Getter
     private final String sessionId;
-    @Getter
     private final Boolean wasExpired;
 
     /**
@@ -17,6 +20,7 @@ public class UserLogoutEvent extends ApplicationEvent {
      * @param sessionId
      * @param wasExpired whether the user is logged autoamtically because the session has expired
      */
+    @Builder
     public UserLogoutEvent(Object source, String userId, String sessionId, Boolean wasExpired) {
         super(source);
         this.userId = userId;
