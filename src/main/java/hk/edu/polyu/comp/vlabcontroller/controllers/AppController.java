@@ -11,10 +11,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -149,14 +146,12 @@ public class AppController extends BaseController {
         }
     }
 
-    @RequestMapping(value = "/redirect/*", method = RequestMethod.GET)
+    @RequestMapping(value = {"/redirect/{subDomain}", "/redirect/{subDomain}/{path}"}, method = RequestMethod.GET)
     private String subDomainRedirection(ModelMap map, HttpServletRequest request,
                                         RedirectAttributes redirectAttributes,
+                                        @PathVariable String subDomain, @PathVariable(required = false) String path,
                                         @ModelAttribute("md") String markdownUrl) {
         try {
-            var servletPath = request.getServletPath().substring("/redirect/".length()).split("/", -1);
-            var subDomain = servletPath[0];
-            var path = servletPath[1];
             var baseDomain = proxyProperties.getDomain();
             var args = subDomain.split("--");
             var appID = args[args.length - 2];
