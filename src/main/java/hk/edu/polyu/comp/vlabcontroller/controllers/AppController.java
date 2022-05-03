@@ -1,19 +1,14 @@
 package hk.edu.polyu.comp.vlabcontroller.controllers;
 
-import com.google.common.base.Strings;
 import hk.edu.polyu.comp.vlabcontroller.VLabControllerException;
-import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
-import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.EntryPointSpec;
-import hk.edu.polyu.comp.vlabcontroller.service.ProxyService;
-import hk.edu.polyu.comp.vlabcontroller.service.UserService;
 import hk.edu.polyu.comp.vlabcontroller.util.ProxyMappingManager;
+import hk.edu.polyu.comp.vlabcontroller.util.Retrying;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
@@ -27,29 +22,21 @@ import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static hk.edu.polyu.comp.vlabcontroller.controllers.FileBrowserController.awaitReadyHelper;
 
+@Slf4j
 @Controller
+@RequiredArgsConstructor(onConstructor_ = {@Lazy})
 public class AppController extends BaseController {
-
-    private final Logger log = LogManager.getLogger(AppController.class);
-
     private final ProxyMappingManager mappingManager;
-
-    protected AppController(ProxyService proxyService, UserService userService, Environment environment, @Lazy IAuthenticationBackend authenticationBackend, ProxyMappingManager mappingManager) {
-        super(proxyService, userService, environment, authenticationBackend);
-        this.mappingManager = mappingManager;
-    }
-
+    private final Retrying retrying;
 
     @RequestMapping(value = "/app/**", method = RequestMethod.GET)
     public String app(ModelMap map, HttpServletRequest request,
@@ -57,10 +44,11 @@ public class AppController extends BaseController {
                       @ModelAttribute("md") String markdownEncodedUrl) {
         prepareMap(map, request);
 
-        Proxy proxy = findUserProxy(request);
-        if (proxy == null && !userService.isAdmin()) {
-            int containerLimit = environment.getProperty("proxy.container-quantity-limit", Integer.class, 2);
-            int proxies = proxyService.getProxies(p -> p.getUserId().equals(userService.getCurrentUserId()) && !p.getSpec().getId().equals("filebrowser"), false).size();
+        var proxy = findUserProxy(request);
+        var hasProxy = proxy == null;
+        if (hasProxy && !userService.isAdmin()) {
+            int containerLimit = proxyProperties.getContainerQuantityLimit();
+            var proxies = proxyService.getProxies(p -> p.getUserId().equals(userService.getCurrentUserId()) && !p.getSpec().getId().equals("filebrowser"), false).size();
             if (proxies >= containerLimit) {
                 return "limit-error";
             }
@@ -68,23 +56,23 @@ public class AppController extends BaseController {
         awaitReady(proxy);
 
         map.put("appTitle", getAppTitle(request));
-        String baseDomain = environment.getProperty("proxy.domain");
+        var baseDomain = proxyProperties.getDomain();
         map.put("baseDomain", baseDomain);
-        if (!Strings.isNullOrEmpty(innerURI)) {
+        if (innerURI != null && !innerURI.isEmpty()) {
             innerURI = new String(Base64.getDecoder().decode(innerURI), StandardCharsets.UTF_8);
             map.put("subDomainMode", true);
             map.put("iframeURL", innerURI);
-            map.put("container", (proxy == null) ? "" : innerURI);
+            map.put("container", hasProxy ? "" : innerURI);
         } else {
-            map.put("container", (proxy == null) ? "" : buildContainerPath(request));
+            map.put("container", hasProxy ? "" : buildContainerPath(request));
         }
-        map.put("proxyId", (proxy == null) ? "" : proxy.getId());
-        map.put("startTime", (proxy == null) ? System.currentTimeMillis() : proxy.getStartupTimestamp());
-        map.put("maxAge", Duration.parse(environment.getProperty("proxy.engagement.max-age", "PT4H")).toMillis());
+        map.put("proxyId", hasProxy ? "" : proxy.getId());
+        map.put("startTime", hasProxy ? System.currentTimeMillis() : proxy.getStartupTimestamp());
+        map.put("maxAge", proxyProperties.getMaxAge().toMillis());
         String markdownURL;
         try {
             markdownURL = new String(Base64.getUrlDecoder().decode(markdownEncodedUrl), StandardCharsets.UTF_8);
-            Pattern urlPattern = Pattern.compile("(https?)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]");
+            var urlPattern = Pattern.compile("(https?)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]");
             if (urlPattern.matcher(markdownURL).matches()) {
                 markdownURL = URLEncoder.encode(markdownURL, StandardCharsets.UTF_8.toString());
             } else {
@@ -101,47 +89,43 @@ public class AppController extends BaseController {
     @ResponseBody
     public Map<String, String> startApp(HttpServletRequest request) {
         try {
-            Proxy proxy = getOrStart(request);
-            String containerPath = buildContainerPath(request);
+            var proxy = getOrStart(request);
+            var containerPath = buildContainerPath(request);
 
             Map<String, String> response = new HashMap<>();
             response.put("containerPath", containerPath);
             response.put("proxyId", proxy.getId());
             return response;
-        } catch (IllegalArgumentException e) {
-            log.error(e.getMessage());
-            log.debug(e);
-            Map<String, String> response = new HashMap<>();
-            response.put("error_code", "404");
-            response.put("error_message", "Unable to find application: " + getAppName(request));
-            return response;
-        } catch (VLabControllerException e) {
+        } catch (IllegalArgumentException | VLabControllerException e) {
             log.error(e.getMessage() + ": " + getAppName(request));
-            log.debug(e);
-            Map<String, String> response = new HashMap<>();
-            response.put("error_code", "404");
-            response.put("error_message", "Failed to start application: " + getAppName(request));
-            return response;
+            log.debug("an error occured: {}", e);
+            return Map.ofEntries(
+                Map.entry("error_code", "404"),
+                Map.entry("error_message",
+                    (e instanceof IllegalArgumentException
+                        ? "Unable to find application: "
+                        : "Failed to start application: ") + getAppName(request))
+            );
         }
     }
 
     @RequestMapping(value = "/app_direct/**")
     public void appDirect(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        Proxy proxy = findUserProxy(request);
+        var proxy = findUserProxy(request);
         awaitReady(proxy);
 
-        String mapping = getProxyEndpoint(proxy);
-        String appPort = getAppPort(request);
-        String subPath = request.getRequestURI();
+        var mapping = getProxyEndpoint(proxy);
+        var appPort = getAppPort(request);
+        var subPath = request.getRequestURI();
         subPath = subPath.substring(subPath.indexOf("/app_direct/") + 12);
         subPath = subPath.substring(getAppName(request).length());
-        int port = -1;
+        var port = -1;
         if (appPort != null) {
             port = Integer.parseInt(appPort);
             subPath = subPath.substring(("/port/" + appPort).length());
         }
 
-        if (subPath.trim().isEmpty()) {
+        if (subPath.isBlank()) {
             try {
                 response.sendRedirect(request.getRequestURI() + "/");
             } catch (Exception e) {
@@ -168,16 +152,15 @@ public class AppController extends BaseController {
                                         @PathVariable String subDomain, @PathVariable(required = false) String path,
                                         @ModelAttribute("md") String markdownUrl) {
         try {
-            String baseDomain = environment.getProperty("proxy.domain");
-            String[] args = subDomain.split("--");
-            String appID = args[args.length - 2];
-            ProxySpec spec = proxyService.getProxySpec(appID);
+            var baseDomain = proxyProperties.getDomain();
+            var args = subDomain.split("--");
+            var appID = args[args.length - 2];
+            var spec = proxyService.getProxySpec(appID);
 
-            @SuppressWarnings("unchecked")
-            List<EntryPointSpec> apps = (List<EntryPointSpec>) spec.getSettings().get("entrypoint");
+            var apps = (List<EntryPointSpec>) spec.getSettings().get("entrypoint");
 
-            EntryPointSpec entryPointSpec = apps.stream().filter(p -> args[0].equals(Integer.toString(p.getPort()))).collect(Collectors.toList()).get(0);
-            URIBuilder innerURI = new URIBuilder();
+            var entryPointSpec = apps.stream().filter(p -> args[0].equals(Integer.toString(p.getPort()))).collect(Collectors.toList()).get(0);
+            var innerURI = new URIBuilder();
             innerURI.setScheme("https");
             innerURI.setHost(subDomain + "." + baseDomain);
             innerURI.setPath(path);
@@ -192,31 +175,31 @@ public class AppController extends BaseController {
     }
 
     private Proxy getOrStart(HttpServletRequest request) {
-        Proxy proxy = findUserProxy(request);
+        var proxy = findUserProxy(request);
         if (proxy == null) {
-            String specId = getAppName(request);
-            ProxySpec spec = proxyService.getProxySpec(specId);
+            var specId = getAppName(request);
+            var spec = proxyService.getProxySpec(specId);
             if (spec == null) throw new IllegalArgumentException("Unknown proxy spec: " + specId);
-            ProxySpec resolvedSpec = proxyService.resolveProxySpec(spec, null, null);
+            var resolvedSpec = proxyService.resolveProxySpec(spec, null, null);
             proxy = proxyService.startProxy(resolvedSpec, false);
         }
         return proxy;
     }
 
     private boolean awaitReady(Proxy proxy) {
-        return awaitReadyHelper(proxy, environment.getProperty("proxy.container-wait-time", "20000"));
+        return awaitReadyHelper(proxy, proxyProperties.getContainerWaitTime(), retrying);
     }
 
     private String buildContainerPath(HttpServletRequest request) {
-        String appName = getAppName(request);
+        var appName = getAppName(request);
         if (appName == null) return "";
 
-        String queryString = ServletUriComponentsBuilder.fromRequest(request).replaceQueryParam("sp_hide_navbar").build().getQuery();
+        var queryString = ServletUriComponentsBuilder.fromRequest(request).replaceQueryParam("sp_hide_navbar").build().getQuery();
 
         queryString = (queryString == null) ? "" : "?" + queryString;
-        Pattern containerPathPattern = Pattern.compile(".*?/app[^/]*/[^/]*/?(.*)");
-        Matcher matcher = containerPathPattern.matcher(request.getRequestURI());
-        String containerPath = matcher.find() ? matcher.group(1) + queryString : queryString;
+        var containerPathPattern = Pattern.compile(".*?/app[^/]*/[^/]*/?(.*)");
+        var matcher = containerPathPattern.matcher(request.getRequestURI());
+        var containerPath = matcher.find() ? matcher.group(1) + queryString : queryString;
         return getContextPath() + "app_direct/" + appName + "/" + containerPath;
     }
 }

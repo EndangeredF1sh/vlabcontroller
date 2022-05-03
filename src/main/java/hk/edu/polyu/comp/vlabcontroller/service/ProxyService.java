@@ -13,25 +13,22 @@ import hk.edu.polyu.comp.vlabcontroller.spec.IProxySpecMergeStrategy;
 import hk.edu.polyu.comp.vlabcontroller.spec.IProxySpecProvider;
 import hk.edu.polyu.comp.vlabcontroller.spec.ProxySpecException;
 import hk.edu.polyu.comp.vlabcontroller.util.ProxyMappingManager;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.DurationUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
-import java.io.OutputStream;
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
+import java.util.concurrent.Future;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -47,12 +44,12 @@ import java.util.stream.Collectors;
  * checks before manipulating proxies.
  * </p>
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor(onConstructor_ = {@Lazy})
 public class ProxyService {
-
-    private final Logger log = LogManager.getLogger(ProxyService.class);
     private final List<Proxy> activeProxies = Collections.synchronizedList(new ArrayList<>());
-    private final ExecutorService containerKiller = Executors.newSingleThreadExecutor();
+    private final ThreadPoolTaskScheduler taskScheduler;
 
     private final IProxySpecProvider baseSpecProvider;
     private final IProxySpecMergeStrategy specMergeStrategy;
@@ -61,29 +58,17 @@ public class ProxyService {
     private final UserService userService;
     private final LogService logService;
     private final ApplicationEventPublisher applicationEventPublisher;
-
-    @Lazy
-    public ProxyService(IProxySpecProvider baseSpecProvider, IProxySpecMergeStrategy specMergeStrategy, IContainerBackend backend, ProxyMappingManager mappingManager, UserService userService, LogService logService, ApplicationEventPublisher applicationEventPublisher) {
-        this.baseSpecProvider = baseSpecProvider;
-        this.specMergeStrategy = specMergeStrategy;
-        this.backend = backend;
-        this.mappingManager = mappingManager;
-        this.userService = userService;
-        this.logService = logService;
-        this.applicationEventPublisher = applicationEventPublisher;
-    }
+    private List<Future<?>> containerKillerFutures = new ArrayList<>();
 
     @PreDestroy
     public void shutdown() {
-        try {
-            containerKiller.shutdown();
-        } finally {
-            for (Proxy proxy : activeProxies) {
-                try {
-                    backend.stopProxy(proxy);
-                } catch (Exception exception) {
-                    exception.printStackTrace();
-                }
+        containerKillerFutures.forEach(x -> x.cancel(true));
+
+        for (var proxy : activeProxies) {
+            try {
+                backend.stopProxy(proxy);
+            } catch (Exception exception) {
+                exception.printStackTrace();
             }
         }
     }
@@ -119,9 +104,9 @@ public class ProxyService {
      */
     public List<ProxySpec> getProxySpecs(Predicate<ProxySpec> filter, boolean ignoreAccessControl) {
         return baseSpecProvider.getSpecs().stream()
-                .filter(spec -> ignoreAccessControl || userService.canAccess(spec))
-                .filter(spec -> filter == null || filter.test(spec))
-                .collect(Collectors.toList());
+            .filter(spec -> ignoreAccessControl || userService.canAccess(spec))
+            .filter(spec -> filter == null || filter.test(spec))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -168,11 +153,11 @@ public class ProxyService {
      * @return A List of matching proxies, may be empty.
      */
     public List<Proxy> getProxies(Predicate<Proxy> filter, boolean ignoreAccessControl) {
-        boolean isAdmin = userService.isAdmin();
+        var isAdmin = userService.isAdmin();
         List<Proxy> matches = new ArrayList<>();
         synchronized (activeProxies) {
-            for (Proxy proxy : activeProxies) {
-                boolean hasAccess = ignoreAccessControl || isAdmin || userService.isOwner(proxy);
+            for (var proxy : activeProxies) {
+                var hasAccess = ignoreAccessControl || isAdmin || userService.isOwner(proxy);
                 if (hasAccess && (filter == null || filter.test(proxy))) matches.add(proxy);
             }
         }
@@ -192,11 +177,12 @@ public class ProxyService {
             throw new AccessDeniedException(String.format("Cannot start proxy %s: access denied", spec.getId()));
         }
 
-        Proxy proxy = new Proxy();
-        proxy.setStatus(ProxyStatus.New);
-        proxy.setUserId(userService.getCurrentUserId());
-        proxy.setSpec(spec);
-        proxy.setAdmin(userService.isAdmin());
+        var proxy = Proxy.builder()
+            .status(ProxyStatus.New)
+            .userId(userService.getCurrentUserId())
+            .spec(spec.copy())
+            .admin(userService.isAdmin())
+            .build();
         activeProxies.add(proxy);
 
         try {
@@ -204,16 +190,17 @@ public class ProxyService {
         } finally {
             if (proxy.getStatus() != ProxyStatus.Up) {
                 activeProxies.remove(proxy);
-                applicationEventPublisher.publishEvent(new ProxyStartFailedEvent(this, proxy.getUserId(), spec.getId()));
+                var event = ProxyStartFailedEvent.builder().source(this).specId(spec.getId()).userId(proxy.getUserId()).build();
+                applicationEventPublisher.publishEvent(event);
             }
         }
 
-        for (Entry<String, URI> target : proxy.getTargets().entrySet()) {
+        for (var target : proxy.getTargets().entrySet()) {
             mappingManager.addMapping(proxy.getId(), target.getKey(), target.getValue());
         }
 
         if (logService.isLoggingEnabled()) {
-            BiConsumer<OutputStream, OutputStream> outputAttacher = backend.getOutputAttacher(proxy);
+            var outputAttacher = backend.getOutputAttacher(proxy);
             if (outputAttacher == null) {
                 log.warn("Cannot log proxy output: " + backend.getClass() + " does not support output attaching.");
             } else {
@@ -222,7 +209,11 @@ public class ProxyService {
         }
 
         log.info(String.format("Proxy activated [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), spec.getId(), proxy.getId()));
-        applicationEventPublisher.publishEvent(new ProxyStartEvent(this, proxy.getUserId(), spec.getId(), Duration.ofMillis(proxy.getStartupTimestamp() - proxy.getCreatedTimestamp())));
+        var event = ProxyStartEvent.builder()
+            .source(this).proxyId(proxy.getId()).specId(spec.getId()).userId(proxy.getUserId())
+            .startupTime(proxy.getStartupTimestamp().minus(proxy.getCreatedTimestamp()))
+            .build();
+        applicationEventPublisher.publishEvent(event);
 
         return proxy;
     }
@@ -235,7 +226,7 @@ public class ProxyService {
      * @param ignoreAccessControl True to allow access to any proxy, regardless of the current security context.
      * @param silenceOffset       Milliseconds to subtract idle silence period, report accurate usage time.
      */
-    public void stopProxy(Proxy proxy, boolean async, boolean ignoreAccessControl, long silenceOffset) {
+    public void stopProxy(Proxy proxy, boolean async, boolean ignoreAccessControl, Duration silenceOffset) {
         if (!ignoreAccessControl && !userService.isAdmin() && !userService.isOwner(proxy)) {
             throw new AccessDeniedException(String.format("Cannot stop proxy %s: access denied", proxy.getId()));
         }
@@ -247,16 +238,18 @@ public class ProxyService {
                 backend.stopProxy(proxy);
                 logService.detach(proxy);
                 log.info(String.format("Proxy released [user: %s] [spec: %s] [id: %s]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId()));
-                if (proxy.getStartupTimestamp() > 0) {
-                    applicationEventPublisher.publishEvent(new ProxyStopEvent(this, proxy.getUserId(),
-                            proxy.getSpec().getId(),
-                            Duration.ofMillis(System.currentTimeMillis() - proxy.getStartupTimestamp() - silenceOffset)));
+                if (DurationUtils.isPositive(proxy.getStartupTimestamp())) {
+                    var event = ProxyStopEvent.builder()
+                        .usageTime(Duration.ofMillis(System.currentTimeMillis()).minus(proxy.getStartupTimestamp()).minus(silenceOffset))
+                        .source(this).proxyId(proxy.getId()).userId(proxy.getUserId()).specId(proxy.getSpec().getId())
+                        .build();
+                    applicationEventPublisher.publishEvent(event);
                 }
             } catch (Exception e) {
                 log.error("Failed to release proxy " + proxy.getId(), e);
             }
         };
-        if (async) containerKiller.submit(releaser);
+        if (async) containerKillerFutures.add(taskScheduler.submit(releaser));
         else releaser.run();
 
         mappingManager.removeProxyMapping(proxy.getId());

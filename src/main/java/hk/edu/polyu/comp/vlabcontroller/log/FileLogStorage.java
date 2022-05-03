@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 
-import static com.pivovarit.function.ThrowingFunction.unchecked;
+import static io.vavr.API.unchecked;
 
 public class FileLogStorage extends AbstractLogStorage {
 
@@ -21,7 +21,7 @@ public class FileLogStorage extends AbstractLogStorage {
 
     @Override
     public OutputStream[] createOutputStreams(Proxy proxy) throws IOException {
-        return Arrays.stream(getLogs(proxy)).map(unchecked(FileOutputStream::new)).toArray(OutputStream[]::new);
+        return Arrays.stream(getLogs(proxy)).map(unchecked(x -> new FileOutputStream(x))).toArray(OutputStream[]::new);
     }
 
 }

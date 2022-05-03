@@ -1,69 +1,55 @@
 package hk.edu.polyu.comp.vlabcontroller.controllers;
 
-import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
-import hk.edu.polyu.comp.vlabcontroller.model.runtime.HeartbeatStatus;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
 import hk.edu.polyu.comp.vlabcontroller.service.HeartbeatService;
-import hk.edu.polyu.comp.vlabcontroller.service.ProxyService;
-import hk.edu.polyu.comp.vlabcontroller.service.UserService;
+import hk.edu.polyu.comp.vlabcontroller.util.DurationUtil;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.time.DurationUtils;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
+@RequiredArgsConstructor(onConstructor_ = {@Lazy})
 public class AdminController extends BaseController {
-
     private final HeartbeatService heartbeatService;
-
-    protected AdminController(ProxyService proxyService, UserService userService, Environment environment, IAuthenticationBackend authenticationBackend, @Lazy HeartbeatService heartbeatService) {
-        super(proxyService, userService, environment, authenticationBackend);
-        this.heartbeatService = heartbeatService;
-    }
-
 
     @RequestMapping("/admin")
     private String admin(ModelMap map, HttpServletRequest request) {
         prepareMap(map, request);
 
-        List<Proxy> proxies = proxyService.getProxies(null, false);
-        Map<String, String> proxyUptimes = new HashMap<>();
-        for (Proxy proxy : proxies) {
-            long uptimeSec = 0;
-            // if the proxy hasn't started up yet, the uptime should be zero
-            if (proxy.getStartupTimestamp() > 0) {
-                uptimeSec = (System.currentTimeMillis() - proxy.getStartupTimestamp()) / 1000;
-            }
-            String uptime = String.format("%d:%02d:%02d", uptimeSec / 3600, (uptimeSec % 3600) / 60, uptimeSec % 60);
-            proxyUptimes.put(proxy.getId(), uptime);
-        }
+        var websocketHeartbeats = heartbeatService.getWebsocketHeartbeats();
+        var heartbeatRate = proxyProperties.getHeartbeatRate();
 
-        Map<String, Long> proxyHeartbeats = heartbeatService.getProxyHeartbeats();
-        Map<String, HeartbeatStatus> websocketHeartbeats = heartbeatService.getWebsocketHeartbeats();
-        long heartbeatRate = Long.parseLong(environment.getProperty("proxy.heartbeat-rate", "60000"));
-
-        Map<String, Long> lastActive = new HashMap<>();
-        proxyHeartbeats.forEach((k, v) -> {
-            long httpRequestActiveTimestamp = v;
-            HeartbeatStatus hbs = websocketHeartbeats.get(k);
-            if (hbs != null) {
-                long websocketActiveTimestamp = hbs.getLastRecordTimestamp() - hbs.getTerminateCounter() * heartbeatRate;
-                lastActive.put(k, Math.max(websocketActiveTimestamp, httpRequestActiveTimestamp));
-            } else {
-                lastActive.put(k, httpRequestActiveTimestamp);
-            }
-        });
-
-        map.put("proxies", proxies);
-        map.put("proxyUptimes", proxyUptimes);
-        map.put("lastActive", lastActive);
+        map.put("proxies", proxyService.getProxies(null, false));
+        map.put("proxyUptimes", getUptimes(proxyService.getProxies(null, false)));
+        map.put("lastActive", heartbeatService.getProxyHeartbeats().entrySet().stream().collect(
+            Collectors.toMap(Map.Entry::getKey, x -> DurationUtil.max(x.getValue(),
+                Optional.ofNullable(websocketHeartbeats.get(x.getKey()))
+                    .map(hbs -> hbs.getLastRecordTimestamp().minus(heartbeatRate.multipliedBy(hbs.getTerminateCounter())))
+                    .orElse(Duration.ofMillis(1L).negated()))
+            )));
 
         return "admin";
+    }
+
+    static Map<String, String> getUptimes(List<Proxy> proxies) {
+        return proxies.stream()
+            .collect(Collectors.toMap(Proxy::getId, proxy -> {
+                // if the proxy hasn't started up yet, the uptime should be zero
+                var uptime = proxy.getStartupTimestamp();
+                if (DurationUtils.isPositive(uptime)) {
+                    uptime = Duration.ofMillis(System.currentTimeMillis()).minus(uptime);
+                }
+                return String.format("%d:%02d:%02d", uptime.toHours(), uptime.toMinutesPart(), uptime.toSecondsPart());
+            }));
     }
 }

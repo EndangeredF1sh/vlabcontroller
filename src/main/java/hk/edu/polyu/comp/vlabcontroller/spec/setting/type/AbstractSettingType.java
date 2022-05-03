@@ -8,6 +8,7 @@ import hk.edu.polyu.comp.vlabcontroller.model.spec.RuntimeSettingSpec;
 import hk.edu.polyu.comp.vlabcontroller.spec.ProxySpecException;
 import hk.edu.polyu.comp.vlabcontroller.spec.setting.IRuntimeSettingType;
 import hk.edu.polyu.comp.vlabcontroller.spec.setting.SettingSpecMapper;
+import lombok.Setter;
 
 /**
  * Example runtime settings:
@@ -34,13 +35,12 @@ import hk.edu.polyu.comp.vlabcontroller.spec.setting.SettingSpecMapper;
  * Each class translates into several settings, e.g. cpu & memory
  */
 public abstract class AbstractSettingType implements IRuntimeSettingType {
-
-    @Inject
+    @Setter(onMethod_ = {@Inject})
     protected SettingSpecMapper mapper;
 
     @Override
     public void apply(RuntimeSetting setting, RuntimeSettingSpec settingSpec, ProxySpec targetSpec) throws ProxySpecException {
-        Object value = getValue(setting, settingSpec);
+        var value = getValue(setting, settingSpec);
         if (value == null) return;
         mapper.mapValue(value, settingSpec, targetSpec);
     }

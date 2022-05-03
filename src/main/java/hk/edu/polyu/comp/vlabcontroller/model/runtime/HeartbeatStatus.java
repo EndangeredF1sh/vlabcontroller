@@ -1,22 +1,18 @@
 package hk.edu.polyu.comp.vlabcontroller.model.runtime;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
+import java.time.Duration;
+
+@Data @Builder(toBuilder = true) @AllArgsConstructor
 public class HeartbeatStatus {
-    @Getter
-    private long startRecordTimestamp;
-    @Getter
-    @Setter
-    private long lastRecordTimestamp;
-    @Getter
-    @Setter
+    private Duration startRecordTimestamp;
+    private Duration lastRecordTimestamp;
     private int totalPayloadLength;
-    @Getter
     private int terminateCounter;
 
     public HeartbeatStatus() {
-        this.startRecordTimestamp = System.currentTimeMillis();
+        this.startRecordTimestamp = Duration.ofMillis(System.currentTimeMillis());
         this.lastRecordTimestamp = this.startRecordTimestamp;
     }
 
@@ -25,7 +21,7 @@ public class HeartbeatStatus {
     }
 
     public void clearAll() {
-        startRecordTimestamp = System.currentTimeMillis();
+        startRecordTimestamp = Duration.ofMillis(System.currentTimeMillis());
         totalPayloadLength = 0;
         terminateCounter = 0;
     }

@@ -1,94 +1,153 @@
 package hk.edu.polyu.comp.vlabcontroller.service;
 
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.HeartbeatStatus;
-import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.ProxyStatus;
-import hk.edu.polyu.comp.vlabcontroller.spec.EngagementProperties;
 import hk.edu.polyu.comp.vlabcontroller.util.ChannelActiveListener;
 import hk.edu.polyu.comp.vlabcontroller.util.DelegatingStreamSinkConduit;
 import hk.edu.polyu.comp.vlabcontroller.util.DelegatingStreamSourceConduit;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpServerConnection;
-import lombok.extern.log4j.Log4j2;
-import org.springframework.core.env.Environment;
+import io.vavr.Function0;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.time.DurationUtils;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Service;
 import org.xnio.StreamConnection;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ScheduledFuture;
+import java.util.function.Consumer;
 
-@Log4j2
+@Slf4j
 @Service
+@RequiredArgsConstructor
+@RefreshScope
 public class HeartbeatService {
-
-    private static final String PROP_ENABLED = "proxy.heartbeat-enabled";
-    private static final String PROP_RATE = "proxy.heartbeat-rate";
-    private static final String PROP_TIMEOUT = "proxy.heartbeat-timeout";
-
     private static final byte[] WEBSOCKET_PING = {(byte) 0b10001001, (byte) 0b00000000};
     private static final byte WEBSOCKET_PONG = (byte) 0b10001010;
 
-    private final Map<String, Long> proxyHeartbeats = Collections.synchronizedMap(new HashMap<>());
+    @Getter
+    private final Map<String, Duration> proxyHeartbeats = Collections.synchronizedMap(new HashMap<>());
+    @Getter
     private final Map<String, HeartbeatStatus> websocketHeartbeats = Collections.synchronizedMap(new HashMap<>());
-    private final ScheduledExecutorService heartbeatExecutor = Executors.newScheduledThreadPool(3);
 
+    @Setter
     private volatile boolean enabled;
 
     private final ProxyService proxyService;
-    private final Environment environment;
+    private final ProxyProperties proxyProperties;
+    private final ThreadPoolTaskScheduler taskScheduler;
 
-    @Resource
-    private EngagementProperties engagementProperties;
+    private List<ScheduledFuture<?>> runningFutures = new ArrayList<>();
 
-    public HeartbeatService(ProxyService proxyService, Environment environment) {
-        this.proxyService = proxyService;
-        this.environment = environment;
+    private ScheduledFuture<?> idleDetectionFuture;
+
+    @EventListener
+    public void onRefreshScopeRefreshed(final RefreshScopeRefreshedEvent event) {
+        log.debug("heartbeat service refreshed");
     }
 
     @PostConstruct
     public void init() {
-        enabled = Boolean.parseBoolean(environment.getProperty(PROP_ENABLED, "false"));
-        if (!enabled) {
-            enabled = environment.getProperty(PROP_RATE) != null || environment.getProperty(PROP_TIMEOUT) != null;
+        enabled = proxyProperties.isHeartbeatEnabled() || DurationUtils.isPositive(proxyProperties.getHeartbeatRate()) || DurationUtils.isPositive(proxyProperties.getHeartbeatTimeout());
+
+        Runnable idleDetection = () -> {
+            try {
+                log.debug("running idle detection");
+                var currentTimestamp = Duration.ofMillis(System.currentTimeMillis());
+                proxyService.getProxies(null, true).stream()
+                        .filter(proxy -> proxy.getStatus() == ProxyStatus.Up)
+                        .filter(proxy -> !proxy.getSpec().getId().equals("filebrowser"))
+                        .forEach(proxy -> {
+                            var id = proxy.getId();
+                            Consumer<Duration> deleteProxy = time -> {
+                                proxyHeartbeats.remove(id);
+                                websocketHeartbeats.remove(id);
+                                proxyService.stopProxy(proxy, true, true, time);
+                            };
+
+                            var engagement = proxyProperties.getEngagement();
+                            if (currentTimestamp.minus(proxy.getStartupTimestamp()).compareTo(engagement.getMaxAge()) > 0) {
+                                log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), id, engagement.getMaxAge().toHours()));
+                                deleteProxy.accept(Duration.ZERO);
+                                return;
+                            }
+                            // websocket idle termination
+                            if (!engagement.isEnabled()) {
+                                return;
+                            }
+                            var idleRetryLimit = engagement.getIdleRetry();
+                            var webSocketHeartbeatStatus = websocketHeartbeats.get(id);
+                            var isPureHttp = webSocketHeartbeatStatus == null;
+                            Function0<Boolean> isIdled = () -> webSocketHeartbeatStatus.getTerminateCounter() >= idleRetryLimit;
+
+                            // 230 bytes per second default (10% load, 2300 bytes/sec when working on vscode)
+                            var threshold = engagement.getThreshold();
+
+                            if (!isPureHttp) {
+                                // idle
+                                var duration = currentTimestamp.minus(webSocketHeartbeatStatus.getStartRecordTimestamp());
+                                var rate = webSocketHeartbeatStatus.getTotalPayloadLength() / duration.toSeconds();
+                                if (rate < threshold) {
+                                    webSocketHeartbeatStatus.increaseCounter();
+                                    log.debug("proxy {} websocket idle detected ({}/{})! average speed={} bytes/sec, threshold={} bytes/sec", id, webSocketHeartbeatStatus.getTerminateCounter(), idleRetryLimit, rate, threshold);
+                                }
+                                // active
+                                else {
+                                    log.debug("proxy {} websocket active, average speed={} bytes/sec, threshold={} bytes/sec", id, rate, threshold);
+                                    webSocketHeartbeatStatus.clearAll();
+                                }
+
+                                webSocketHeartbeatStatus.setLastRecordTimestamp(Duration.ofMillis(System.currentTimeMillis()));
+                            }
+
+                            var proxySilence = currentTimestamp.minus(Optional.ofNullable(proxyHeartbeats.get(id)).orElseGet(proxy::getStartupTimestamp));
+                            if ((proxySilence.compareTo(proxyProperties.getHeartbeatTimeout()) > 0) && (isPureHttp || isIdled.apply())) {
+                                var silence = isPureHttp ? proxySilence : proxyProperties.getHeartbeatRate().multipliedBy(webSocketHeartbeatStatus.getTerminateCounter() - 1);
+                                log.info("Releasing {} proxy [user: {}] [spec: {}] [id: {}] [silence: {}ms]",
+                                        isPureHttp ? "inactive" : "idled",
+                                        proxy.getUserId(),
+                                        proxy.getSpec().getId(),
+                                        id,
+                                        silence);
+                                deleteProxy.accept(silence);
+                            }
+                            log.debug("proxy {} received HTTP requests {} ms ago, inactive threshold={} ms", id, proxySilence, proxyProperties.getHeartbeatTimeout());
+                        });
+            } catch (Throwable t) {
+                log.error("Error in " + this.getClass().getSimpleName(), t);
+            }
+        };
+
+        if (idleDetectionFuture != null) {
+            idleDetectionFuture.cancel(true);
+            idleDetectionFuture = null;
         }
 
         if (enabled) {
             log.debug("Idle detection enabled");
-            Thread cleanupThread = new Thread(new InactiveProxyKiller(), InactiveProxyKiller.class.getSimpleName());
-            cleanupThread.setDaemon(true);
-            cleanupThread.start();
+            idleDetectionFuture = taskScheduler.scheduleAtFixedRate(idleDetection, proxyProperties.getHeartbeatRate());
         }
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public Map<String, HeartbeatStatus> getWebsocketHeartbeats() {
-        return websocketHeartbeats;
-    }
-
-    public Map<String, Long> getProxyHeartbeats() {
-        return proxyHeartbeats;
     }
 
     public void attachHeartbeatChecker(HttpServerExchange exchange, String proxyId) {
         if (exchange.isUpgrade()) {
             // For websockets, attach a ping-pong listener to the underlying TCP channel.
-            HeartbeatConnector connector = new HeartbeatConnector(proxyId);
+            var connector = new HeartbeatConnector(proxyId);
             // Delay the wrapping, because Undertow will make changes to the channel while the upgrade is being performed.
-            HttpServerConnection httpConn = (HttpServerConnection) exchange.getConnection();
-            heartbeatExecutor.schedule(() -> connector.wrapChannels(httpConn.getChannel()), 3000, TimeUnit.MILLISECONDS);
+            var httpConn = (HttpServerConnection) exchange.getConnection();
+            runningFutures.add(taskScheduler.scheduleAtFixedRate(() -> connector.wrapChannels(httpConn.getChannel()), Duration.ofSeconds(3)));
         } else {
             // request URI prefix filter
             // exchange.getRequestPath() == /proxy_endpoint/<proxy_uuid>/<real-path-in-container>
@@ -96,8 +155,8 @@ public class HeartbeatService {
             // e.g access http://<domain-name>/<spring-context-path>/app/app_name/static/js/example.js
             // exchange.getRequestPath() == /proxy_endpoint/<proxy-uuid>/static/js/example.js
             // exchange.getRelativePath() == /static/js/example.js
-            for (String path : engagementProperties.getFilterPath()) {
-                String relativeRequestPath = exchange.getRelativePath();
+            for (var path : proxyProperties.getEngagement().getFilterPath()) {
+                var relativeRequestPath = exchange.getRelativePath();
                 log.debug("Client requests {} to proxy {}", relativeRequestPath, proxyId);
                 if (relativeRequestPath.startsWith(path)) {
                     log.debug("Matched prefix {} of proxy {}", path, proxyId);
@@ -110,17 +169,9 @@ public class HeartbeatService {
     }
 
     private void heartbeatReceived(String proxyId) {
-        Proxy proxy = proxyService.getProxy(proxyId);
+        var proxy = proxyService.getProxy(proxyId);
         if (log.isDebugEnabled()) log.debug("Heartbeat received for proxy " + proxyId);
-        if (proxy != null) proxyHeartbeats.put(proxyId, System.currentTimeMillis());
-    }
-
-    private long getHeartbeatRate() {
-        return Long.parseLong(environment.getProperty(PROP_RATE, "10000"));
-    }
-
-    private long getHeartbeatTimeout() {
-        return Long.parseLong(environment.getProperty(PROP_TIMEOUT, "60000"));
+        if (proxy != null) proxyHeartbeats.put(proxyId, Duration.ofMillis(System.currentTimeMillis()));
     }
 
     private class HeartbeatConnector {
@@ -134,25 +185,25 @@ public class HeartbeatService {
         private void wrapChannels(StreamConnection streamConn) {
             if (!streamConn.isOpen()) return;
 
-            ConduitStreamSinkChannel sinkChannel = streamConn.getSinkChannel();
-            ChannelActiveListener writeListener = new ChannelActiveListener();
-            DelegatingStreamSinkConduit conduitWrapper = new DelegatingStreamSinkConduit(sinkChannel.getConduit(), writeListener);
+            var sinkChannel = streamConn.getSinkChannel();
+            var writeListener = new ChannelActiveListener();
+            var conduitWrapper = new DelegatingStreamSinkConduit(sinkChannel.getConduit(), writeListener);
             sinkChannel.setConduit(conduitWrapper);
 
-            ConduitStreamSourceChannel sourceChannel = streamConn.getSourceChannel();
-            DelegatingStreamSourceConduit srcConduitWrapper = new DelegatingStreamSourceConduit(sourceChannel.getConduit(), data -> checkPong(data));
+            var sourceChannel = streamConn.getSourceChannel();
+            var srcConduitWrapper = new DelegatingStreamSourceConduit(sourceChannel.getConduit(), this::checkPong);
             sourceChannel.setConduit(srcConduitWrapper);
 
-            heartbeatExecutor.schedule(() -> sendPing(writeListener, streamConn), getHeartbeatRate(), TimeUnit.MILLISECONDS);
+            runningFutures.add(taskScheduler.scheduleAtFixedRate(() -> sendPing(writeListener, streamConn), proxyProperties.getHeartbeatRate()));
         }
 
         private void sendPing(ChannelActiveListener writeListener, StreamConnection streamConn) {
-            if (writeListener.isActive(getHeartbeatRate())) {
+            if (writeListener.isActive(proxyProperties.getHeartbeatRate())) {
                 // active means that data was written to the channel in the least heartbeat interval
                 // therefore we don't send a ping now to not cause collisions
 
                 // reschedule ping
-                heartbeatExecutor.schedule(() -> sendPing(writeListener, streamConn), getHeartbeatRate(), TimeUnit.MILLISECONDS);
+                runningFutures.add(taskScheduler.scheduleAtFixedRate(() -> sendPing(writeListener, streamConn), proxyProperties.getHeartbeatRate()));
                 // mark as we received a heartbeat
                 // heartbeatReceived(proxyId);
                 return;
@@ -166,7 +217,7 @@ public class HeartbeatService {
                 // Ignore failure, keep trying as long as the stream connection is valid.
             }
 
-            heartbeatExecutor.schedule(() -> sendPing(writeListener, streamConn), getHeartbeatRate(), TimeUnit.MILLISECONDS);
+            runningFutures.add(taskScheduler.scheduleAtFixedRate(() -> sendPing(writeListener, streamConn), proxyProperties.getHeartbeatRate()));
         }
 
         private void checkPong(byte[] response) {
@@ -179,7 +230,7 @@ public class HeartbeatService {
 
             // payload length analyzer
             // https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
-            int payloadLength = response[1] & 0x7F;
+            var payloadLength = response[1] & 0x7F;
             if (payloadLength == 126) {
                 if (response.length < 4) {
                     // handle broken packet
@@ -202,7 +253,7 @@ public class HeartbeatService {
             }
             log.debug("Websocket packet received, length={} bytes", payloadLength);
 
-            Proxy proxy = proxyService.getProxy(proxyId);
+            var proxy = proxyService.getProxy(proxyId);
 
             // if a proxy is terminated manually before status block created, stop checkPong.
             if (proxy == null || (proxy.getStatus() == ProxyStatus.Stopping || proxy.getStatus() == ProxyStatus.Stopped)) {
@@ -210,95 +261,9 @@ public class HeartbeatService {
                 return;
             }
 
-            HeartbeatStatus heartbeatStatus = websocketHeartbeats.computeIfAbsent(proxyId, k -> new HeartbeatStatus());
-            int lastLength = heartbeatStatus.getTotalPayloadLength();
+            var heartbeatStatus = websocketHeartbeats.computeIfAbsent(proxyId, k -> new HeartbeatStatus());
+            var lastLength = heartbeatStatus.getTotalPayloadLength();
             heartbeatStatus.setTotalPayloadLength(lastLength + payloadLength);
-        }
-    }
-
-    private class InactiveProxyKiller implements Runnable {
-        @Override
-        public void run() {
-            long cleanupInterval = getHeartbeatRate();
-            long heartbeatTimeout = getHeartbeatTimeout();
-
-            while (true) {
-                try {
-                    long currentTimestamp = System.currentTimeMillis();
-                    for (Proxy proxy : proxyService.getProxies(null, true)) {
-                        if (proxy.getStatus() != ProxyStatus.Up) continue;
-                        else if (proxy.getSpec().getId().equals("filebrowser")) continue;
-
-                        // reached max-age limitation
-                        if (currentTimestamp - proxy.getStartupTimestamp() > engagementProperties.getMaxAge().toMillis()) {
-                            log.info(String.format("Releasing timeout proxy [user: %s] [spec: %s] [id: %s] [duration: %dhr]", proxy.getUserId(), proxy.getSpec().getId(), proxy.getId(), engagementProperties.getMaxAge().toHours()));
-                            proxyHeartbeats.remove(proxy.getId());
-                            websocketHeartbeats.remove(proxy.getId());
-                            proxyService.stopProxy(proxy, true, true, 0);
-                            continue;
-                        }
-
-                        // websocket idle termination
-                        boolean isPureHttp = false;
-                        boolean isIdled = false;
-                        int idleRetryLimit = engagementProperties.getIdleRetry();
-                        if (engagementProperties.isEnabled()) {
-                            HeartbeatStatus heartbeatStatus = websocketHeartbeats.get(proxy.getId());
-
-                            // 230 bytes per second default (10% load, 2300 bytes/sec when working on vscode)
-                            int threshold = engagementProperties.getThreshold();
-
-                            if (heartbeatStatus == null) {
-                                isPureHttp = true;
-                            } else {
-                                long duration = currentTimestamp - heartbeatStatus.getStartRecordTimestamp();
-                                // idle
-                                double rate = heartbeatStatus.getTotalPayloadLength() / (duration / 1000.0);
-                                if (rate < threshold) {
-                                    heartbeatStatus.increaseCounter();
-                                    log.debug("proxy {} websocket idle detected ({}/{})! average speed={} bytes/sec, threshold={} bytes/sec", proxy.getId(), heartbeatStatus.getTerminateCounter(), idleRetryLimit, rate, threshold);
-                                }
-                                // active
-                                else {
-                                    log.debug("proxy {} websocket active, average speed={} bytes/sec, threshold={} bytes/sec", proxy.getId(), rate, threshold);
-                                    heartbeatStatus.clearAll();
-                                }
-
-                                // idle confirmed
-                                if (heartbeatStatus.getTerminateCounter() >= idleRetryLimit) {
-                                    isIdled = true;
-                                }
-
-                                heartbeatStatus.setLastRecordTimestamp(System.currentTimeMillis());
-                            }
-
-                            Long lastHeartbeat = proxyHeartbeats.get(proxy.getId());
-                            if (lastHeartbeat == null) lastHeartbeat = proxy.getStartupTimestamp();
-                            long proxySilence = currentTimestamp - lastHeartbeat;
-                            if ((proxySilence > heartbeatTimeout) && (isPureHttp | isIdled)) {
-                                long silence = isPureHttp ? proxySilence : cleanupInterval * (heartbeatStatus.getTerminateCounter() - 1);
-                                log.info("Releasing {} proxy [user: {}] [spec: {}] [id: {}] [silence: {}ms]",
-                                        isPureHttp ? "inactive" : "idled",
-                                        proxy.getUserId(),
-                                        proxy.getSpec().getId(),
-                                        proxy.getId(),
-                                        silence);
-
-                                proxyHeartbeats.remove(proxy.getId());
-                                websocketHeartbeats.remove(proxy.getId());
-                                proxyService.stopProxy(proxy, true, true, silence);
-                            }
-                            log.debug("proxy {} received HTTP requests {} ms ago, inactive threshold={} ms", proxy.getId(), proxySilence, heartbeatTimeout);
-                        }
-                    }
-                    Thread.sleep(cleanupInterval);
-                } catch (InterruptedException e) {
-                    log.error("Inactive proxy killer was interrupted, stop cleanup work");
-                    break;
-                } catch (Throwable t) {
-                    log.error("Error in " + this.getClass().getSimpleName(), t);
-                }
-            }
         }
     }
 }

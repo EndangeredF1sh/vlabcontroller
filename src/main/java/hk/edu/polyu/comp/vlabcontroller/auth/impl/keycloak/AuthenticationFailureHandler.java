@@ -20,9 +20,9 @@ public class AuthenticationFailureHandler extends KeycloakAuthenticationFailureH
         // We now set a flag in the session indicating the reason of the Keycloak error.
         // The error page can then properly handle this.
 
-        Object obj = request.getAttribute("org.keycloak.adapters.spi.AuthenticationError");
+        var obj = request.getAttribute("org.keycloak.adapters.spi.AuthenticationError");
         if (obj instanceof org.keycloak.adapters.OIDCAuthenticationError) {
-            OIDCAuthenticationError authError = (OIDCAuthenticationError) obj;
+            var authError = (OIDCAuthenticationError) obj;
             request.getSession().setAttribute(SP_KEYCLOAK_ERROR_REASON, authError.getReason());
         }
     }

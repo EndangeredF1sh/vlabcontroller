@@ -1,11 +1,10 @@
 package hk.edu.polyu.comp.vlabcontroller.spec.expression;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.expression.*;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.ParserContext;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -21,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Note: inspired by org.springframework.context.expression.StandardBeanExpressionResolver
  */
 @Component
+@RequiredArgsConstructor
 public class SpecExpressionResolver {
 
     private final Map<SpecExpressionContext, StandardEvaluationContext> evaluationCache = new ConcurrentHashMap<>(8);
@@ -40,33 +40,29 @@ public class SpecExpressionResolver {
             return StandardBeanExpressionResolver.DEFAULT_EXPRESSION_SUFFIX;
         }
     };
-    private final ExpressionParser expressionParser;
+    private final ExpressionParser expressionParser = new SpelExpressionParser();
     private final ApplicationContext appContext;
-
-    public SpecExpressionResolver(ApplicationContext appContext) {
-        this.expressionParser = new SpelExpressionParser();
-        this.appContext = appContext;
-    }
 
     public Object evaluate(String expression, SpecExpressionContext context) {
         if (expression == null) return null;
         if (expression.isEmpty()) return "";
 
-        Expression expr = this.expressionParser.parseExpression(expression, this.beanExpressionParserContext);
+        var expr = this.expressionParser.parseExpression(expression, this.beanExpressionParserContext);
 
         ConfigurableBeanFactory beanFactory = ((ConfigurableApplicationContext) appContext).getBeanFactory();
 
-        StandardEvaluationContext sec = evaluationCache.get(context);
+        var sec = evaluationCache.get(context);
         if (sec == null) {
-            sec = new StandardEvaluationContext();
-            sec.setRootObject(context);
-            sec.addPropertyAccessor(new BeanExpressionContextAccessor());
-            sec.addPropertyAccessor(new BeanFactoryAccessor());
-            sec.addPropertyAccessor(new MapAccessor());
-            sec.addPropertyAccessor(new EnvironmentAccessor());
-            sec.setBeanResolver(new BeanFactoryResolver(appContext));
-            sec.setTypeLocator(new StandardTypeLocator(beanFactory.getBeanClassLoader()));
-            ConversionService conversionService = beanFactory.getConversionService();
+            sec = new StandardEvaluationContext() {{
+                setRootObject(context);
+                addPropertyAccessor(new BeanExpressionContextAccessor());
+                addPropertyAccessor(new BeanFactoryAccessor());
+                addPropertyAccessor(new MapAccessor());
+                addPropertyAccessor(new EnvironmentAccessor());
+                setBeanResolver(new BeanFactoryResolver(appContext));
+                setTypeLocator(new StandardTypeLocator(beanFactory.getBeanClassLoader()));
+            }};
+            var conversionService = beanFactory.getConversionService();
             if (conversionService != null) sec.setTypeConverter(new StandardTypeConverter(conversionService));
             evaluationCache.put(context, sec);
         }

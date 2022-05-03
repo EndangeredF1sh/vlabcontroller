@@ -1,38 +1,35 @@
 package hk.edu.polyu.comp.vlabcontroller.ui;
 
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
+import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.thymeleaf.templateresolver.FileTemplateResolver;
 
-import javax.inject.Inject;
-
 @Configuration
+@RequiredArgsConstructor
+@RefreshScope
 public class TemplateResolverConfig implements WebMvcConfigurer {
-    private final Environment environment;
-
-    public TemplateResolverConfig(Environment environment) {
-        this.environment = environment;
-    }
+    private final ProxyProperties proxyProperties;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/assets/**")
-                .addResourceLocations("file:" + environment.getProperty("proxy.template-path") + "/assets/");
+                .addResourceLocations("file:" + proxyProperties.getTemplatePath() + "/assets/");
     }
 
     @Bean
     public FileTemplateResolver templateResolver() {
-        FileTemplateResolver resolver = new FileTemplateResolver();
-        resolver.setPrefix(environment.getProperty("proxy.template-path") + "/");
-
-        resolver.setSuffix(".html");
-        resolver.setTemplateMode("HTML5");
-        resolver.setCacheable(false);
-        resolver.setCheckExistence(true);
-        resolver.setOrder(1);
-        return resolver;
+        return new FileTemplateResolver() {{
+            setPrefix(proxyProperties.getTemplatePath() + "/");
+            setSuffix(".html");
+            setTemplateMode("HTML5");
+            setCacheable(false);
+            setCheckExistence(true);
+            setOrder(1);
+        }};
     }
 }

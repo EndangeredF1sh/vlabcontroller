@@ -1,13 +1,9 @@
 package hk.edu.polyu.comp.vlabcontroller.stat.impl;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
-import javax.inject.Inject;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 
@@ -32,57 +28,55 @@ import java.sql.Timestamp;
  * varchar(128), data text );
  */
 public class JDBCCollector extends AbstractDbCollector {
-
     private HikariDataSource ds;
-
-    @Inject
-    private Environment environment;
 
     @PostConstruct
     public void init() {
-        String baseURL = environment.getProperty("proxy.usage-stats-url.jdbc-url");
-        String username = environment.getProperty("proxy.usage-stats-username", "monetdb");
-        String password = environment.getProperty("proxy.usage-stats-password", "monetdb");
-        ds = new HikariDataSource();
-        ds.setJdbcUrl(baseURL);
-        ds.setUsername(username);
-        ds.setPassword(password);
-        ds.addDataSourceProperty("useJDBCCompliantTimezoneShift", "true");
-        ds.addDataSourceProperty("serverTimezone", "UTC");
+        var usageStats = proxyProperties.getUsageStats();
+        var baseURL = usageStats.getUrl().getJdbc();
+        var username = usageStats.getUsername();
+        var password = usageStats.getPassword();
+        ds = new HikariDataSource() {{
+            setJdbcUrl(baseURL);
+            setUsername(username);
+            setPassword(password);
+            addDataSourceProperty("useJDBCCompliantTimezoneShift", "true");
+            addDataSourceProperty("serverTimezone", "UTC");
+        }};
 
-        Long connectionTimeout = environment.getProperty("proxy.usage-stats-hikari.connection-timeout", Long.class);
-        if (connectionTimeout != null) {
-            ds.setConnectionTimeout(connectionTimeout);
+        var hikari = usageStats.getHikari();
+        var connectionTimeout = hikari.getConnectionTimeout();
+        if (!connectionTimeout.isNegative()) {
+            ds.setConnectionTimeout(connectionTimeout.toMillis());
         }
 
-        Long idleTimeout = environment.getProperty("proxy.usage-stats-hikari.idle-timeout", Long.class);
-        if (idleTimeout != null) {
-            ds.setIdleTimeout(idleTimeout);
+        var idleTimeout = hikari.getIdleTimeout();
+        if (!idleTimeout.isNegative()) {
+            ds.setIdleTimeout(idleTimeout.toMillis());
         }
 
-        Long maxLifetime = environment.getProperty("proxy.usage-stats-hikari.max-lifetime", Long.class);
-        if (maxLifetime != null) {
-            ds.setMaxLifetime(maxLifetime);
+        var maxLifetime = hikari.getMaxLifetime();
+        if (!maxLifetime.isNegative()) {
+            ds.setMaxLifetime(maxLifetime.toMillis());
         }
 
-        Integer minimumIdle = environment.getProperty("proxy.usage-stats-hikari.minimum-idle", Integer.class);
-        if (minimumIdle != null) {
+        var minimumIdle = hikari.getMinimumIdle();
+        if (minimumIdle >= 0) {
             ds.setMinimumIdle(minimumIdle);
         }
 
-        Integer maximumPoolSize = environment.getProperty("proxy.usage-stats-hikari.maximum-pool-size", Integer.class);
-        if (maximumPoolSize != null) {
+        var maximumPoolSize = hikari.getMaximumPoolSize();
+        if (maximumPoolSize >= 0) {
             ds.setMaximumPoolSize(maximumPoolSize);
         }
-
     }
 
     @Override
     protected void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException {
-        String identifier = environment.getProperty("proxy.identifier-value", "default-identifier");
-        String sql = "INSERT INTO event(event_time, username, type, specid, identifier, info) VALUES (?,?,?,?,?,?)";
-        try (Connection con = ds.getConnection()) {
-            try (PreparedStatement stmt = con.prepareStatement(sql)) {
+        var identifier = proxyProperties.getIdentifierValue();
+        var sql = "INSERT INTO event(event_time, username, type, specid, identifier, info) VALUES (?,?,?,?,?,?)";
+        try (var con = ds.getConnection()) {
+            try (var stmt = con.prepareStatement(sql)) {
                 stmt.setTimestamp(1, new Timestamp(timestamp));
                 stmt.setString(2, userId);
                 stmt.setString(3, type);

@@ -5,8 +5,11 @@ import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
 import hk.edu.polyu.comp.vlabcontroller.spec.IProxySpecMergeStrategy;
 import hk.edu.polyu.comp.vlabcontroller.spec.ProxySpecException;
 import hk.edu.polyu.comp.vlabcontroller.spec.setting.SettingTypeRegistry;
+import lombok.RequiredArgsConstructor;
+import lombok.val;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,40 +17,29 @@ import java.util.UUID;
  * This default merge strategy allows any combination of base spec, runtime spec and runtime settings.
  */
 @Component
+@RequiredArgsConstructor
 public class DefaultSpecMergeStrategy implements IProxySpecMergeStrategy {
     private final SettingTypeRegistry settingTypeRegistry;
 
-    public DefaultSpecMergeStrategy(SettingTypeRegistry settingTypeRegistry) {
-        this.settingTypeRegistry = settingTypeRegistry;
-    }
-
     @Override
     public ProxySpec merge(ProxySpec baseSpec, ProxySpec runtimeSpec, Set<RuntimeSetting> runtimeSettings) throws ProxySpecException {
-        if (baseSpec == null && runtimeSpec == null)
+        val hasBase = baseSpec != null;
+        val hasRuntime = runtimeSpec != null;
+        if (!(hasBase || hasRuntime))
             throw new ProxySpecException("No base or runtime proxy spec provided");
 
-        ProxySpec finalSpec = new ProxySpec();
-        copySpec(baseSpec, finalSpec);
-        copySpec(runtimeSpec, finalSpec);
+        var finalSpec = (hasBase && hasRuntime)
+            ? runtimeSpec.copyToBuilder(baseSpec.copyBuilder()).build()
+            : (hasBase ? baseSpec : runtimeSpec);
 
-        if (runtimeSettings != null) {
-            for (RuntimeSetting setting : runtimeSettings) {
-                settingTypeRegistry.applySetting(setting, finalSpec);
-            }
+        for (var setting : Optional.ofNullable(runtimeSettings).orElse(Set.of())) {
+            settingTypeRegistry.applySetting(setting, finalSpec);
         }
 
         if (finalSpec.getId() == null) {
-            var id = UUID.randomUUID().toString();
-            finalSpec.setId(id);
-            for (var containerSpec : finalSpec.getContainerSpecs()) {
-                containerSpec.getEnv().put("PUBLIC_PATH", DefaultSpecProvider.getPublicPath(id));
-            }
+            finalSpec.setId(UUID.randomUUID().toString());
+            finalSpec.populateContainerSpecPublicPathById();
         }
         return finalSpec;
-    }
-
-    protected void copySpec(ProxySpec from, ProxySpec to) {
-        if (from == null || to == null) return;
-        from.copy(to);
     }
 }

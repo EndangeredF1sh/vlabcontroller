@@ -1,34 +1,35 @@
 package hk.edu.polyu.comp.vlabcontroller.util;
 
+import io.vavr.control.Try;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.IntPredicate;
+import java.util.stream.IntStream;
 
+@Component
 public class Retrying {
-
-    public static boolean retry(IntPredicate job, int tries, int waitTime) {
+    @Async
+    public CompletableFuture<Boolean> retry(IntPredicate job, int tries, Duration waitTime) {
         return retry(job, tries, waitTime, false);
     }
 
-    public static boolean retry(IntPredicate job, int tries, int waitTime, boolean retryOnException) {
-        boolean retVal = false;
-        RuntimeException exception = null;
-        for (int currentTry = 1; currentTry <= tries; currentTry++) {
+    @Async
+    public CompletableFuture<Boolean> retry(IntPredicate job, int tries, Duration waitTime, boolean retryOnException) {
+        var result = Try.success(false);
+        for (var currentTry : (Iterable<Integer>) () -> IntStream.rangeClosed(1, tries).iterator()) {
+            result = Try.of(() -> job.test(currentTry))
+                .recoverWith(e -> retryOnException ? Try.success(false) : Try.failure(e));
+            if (result.isFailure()) return CompletableFuture.failedFuture(result.getCause());
+            if (result.get()) return CompletableFuture.completedFuture(true);
             try {
-                if (job.test(currentTry)) {
-                    retVal = true;
-                    exception = null;
-                    break;
-                }
-            } catch (RuntimeException e) {
-                if (retryOnException) exception = e;
-                else throw e;
-            }
-            try {
-                Thread.sleep(waitTime);
-            } catch (InterruptedException ignore) {
+                Thread.sleep(waitTime.toMillis());
+            } catch (InterruptedException ignored) {
             }
         }
-        if (exception == null) return retVal;
-        else throw exception;
-
+        if (result.isFailure()) return CompletableFuture.failedFuture(result.getCause());
+        return CompletableFuture.completedFuture(result.get());
     }
 }

@@ -15,43 +15,42 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.PathMatcher;
-import lombok.extern.log4j.Log4j2;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * This component keeps track of which proxy mappings (i.e. URL endpoints) are currently registered,
  * and tells Undertow where they should proxy to.
  */
-@Log4j2
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class ProxyMappingManager {
-
     private static final String PROXY_INTERNAL_ENDPOINT = "/proxy_endpoint";
     private static final String PROXY_PORT_MAPPINGS_ENDPOINT = "/port_mappings";
     private static final AttachmentKey<ProxyMappingManager> ATTACHMENT_KEY_DISPATCHER = AttachmentKey.create(ProxyMappingManager.class);
     private final Map<String, ProxyMappingMetadata> proxyMappings = new HashMap<>(); // proxyId -> metadata
     private PathHandler pathHandler;
     private final HeartbeatService heartbeatService;
-
-    public ProxyMappingManager(HeartbeatService heartbeatService) {
-        this.heartbeatService = heartbeatService;
-    }
+    private final Retrying retrying;
 
     public synchronized HttpHandler createHttpHandler(HttpHandler defaultHandler) {
         if (pathHandler == null) {
@@ -67,27 +66,32 @@ public class ProxyMappingManager {
         if (proxyMappings.containsKey(proxyId)) {
             if (proxyMappings.get(proxyId).containsExactMappingPath(mapping)) return;
         }
-        ProxyMappingMetadata proxyMappingMetadata = proxyMappings.computeIfAbsent(proxyId, value -> new ProxyMappingMetadata());
+        var proxyMappingMetadata = proxyMappings.computeIfAbsent(proxyId, __ -> ProxyMappingMetadata.builder().build());
+        proxyMappingMetadata.setDefaultTarget(target);
 
-        LoadBalancingProxyClient proxyClient = new LoadBalancingProxyClient() {
+        var proxyClient = new LoadBalancingProxyClient() {
             @Override
             public void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit) {
                 try {
                     exchange.addResponseCommitListener(ex -> heartbeatService.attachHeartbeatChecker(ex, proxyId));
                 } catch (Exception e) {
-                    log.error(e);
+                    log.error("an error occured: {}", e);
                 }
                 super.getConnection(target, exchange, callback, timeout, timeUnit);
             }
         };
         proxyClient.setMaxQueueSize(100);
         proxyClient.addHost(target);
+        proxyMappingMetadata.getPortMappingMetadataList().add(
+            PortMappingMetadata.builder()
+                .portMapping(mapping)
+                .target(target)
+                .loadBalancingProxyClient(proxyClient)
+                .build()
+        );
 
-        String path = PROXY_INTERNAL_ENDPOINT + "/" + mapping;
+        var path = PROXY_INTERNAL_ENDPOINT + "/" + mapping;
         pathHandler.addPrefixPath(path, new ProxyHandler(proxyClient, ResponseCodeHandler.HANDLE_404));
-
-        proxyMappingMetadata.setDefaultTarget(target);
-        proxyMappingMetadata.getPortMappingMetadataList().add(new PortMappingMetadata(mapping, target, proxyClient));
         log.debug("mapping {} was added, current mappings: {}", mapping, proxyMappings);
     }
 
@@ -95,10 +99,11 @@ public class ProxyMappingManager {
         if (pathHandler == null)
             throw new IllegalStateException("Cannot change mappings: web server is not yet running.");
         if (proxyMappings.containsKey(proxyId)) {
-            ProxyMappingMetadata metadata = proxyMappings.get(proxyId);
+            var metadata = proxyMappings.get(proxyId);
             metadata.getPortMappingMetadataList().forEach(e -> {
-                e.getLoadBalancingProxyClient().closeCurrentConnections();
-                e.getLoadBalancingProxyClient().removeHost(e.getTarget());
+                var loadBalancingProxyClient = e.getLoadBalancingProxyClient();
+                loadBalancingProxyClient.closeCurrentConnections();
+                loadBalancingProxyClient.removeHost(e.getTarget());
                 pathHandler.removePrefixPath(PROXY_INTERNAL_ENDPOINT + "/"  + e.getPortMapping());
             });
             proxyMappings.remove(proxyId);
@@ -107,11 +112,9 @@ public class ProxyMappingManager {
     }
 
     public String getProxyId(String mapping) {
-        for (Entry<String, ProxyMappingMetadata> e : proxyMappings.entrySet()) {
-            ProxyMappingMetadata metadata = e.getValue();
-            if (metadata.containsMappingPathPrefix(mapping)) return e.getKey();
-        }
-        return null;
+        return proxyMappings.entrySet().stream()
+            .filter(e -> e.getValue().containsMappingPathPrefix(mapping))
+            .map(Map.Entry::getKey).findFirst().orElse(null);
     }
 
     public String getProxyPortMappingsEndpoint() {
@@ -134,12 +137,12 @@ public class ProxyMappingManager {
      * @throws ServletException If the dispatch fails for any other reason.
      */
     public void dispatchAsync(String mapping, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        HttpServerExchange exchange = ServletRequestContext.current().getExchange();
+        var exchange = ServletRequestContext.current().getExchange();
         exchange.putAttachment(ATTACHMENT_KEY_DISPATCHER, this);
 
-        String queryString = request.getQueryString();
+        var queryString = request.getQueryString();
         queryString = (queryString == null) ? "" : "?" + queryString;
-        String targetPath = PROXY_INTERNAL_ENDPOINT + "/" + mapping + queryString;
+        var targetPath = PROXY_INTERNAL_ENDPOINT + "/" + mapping + queryString;
 
         request.startAsync();
         request.getRequestDispatcher(targetPath).forward(request, response);
@@ -163,58 +166,56 @@ public class ProxyMappingManager {
      * @throws ServletException   If the dispatch fails for any other reason.
      * @throws URISyntaxException If URI syntax is not allowed.
      */
-    public void dispatchAsync(Proxy proxy, String mapping, int port, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException, URISyntaxException {
-        HttpServerExchange exchange = ServletRequestContext.current().getExchange();
+    public void dispatchAsync(Proxy proxy, String mapping, int port, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException, URISyntaxException, ExecutionException, InterruptedException {
+        var exchange = ServletRequestContext.current().getExchange();
         exchange.putAttachment(ATTACHMENT_KEY_DISPATCHER, this);
 
-        String proxyId = proxy.getId();
-        URI defaultTarget = proxyMappings.get(proxyId).getDefaultTarget();
-        String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
-        URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
-        int[] failedResponseCode = new int[1];
-        boolean targetConnected = Retrying.retry(i -> {
+        var proxyId = proxy.getId();
+        var defaultTarget = proxyMappings.get(proxyId).getDefaultTarget();
+        var port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
+        var newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
+        var failedResponseCode = new int[1];
+        var query = Optional.ofNullable(request.getQueryString()).map(x -> "?" + x).orElse("");
+        var targetConnected = retrying.retry(i -> {
             try {
-                String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
                 log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Collections.list(request.getHeaderNames()));
 
                 // Handle websocket case
                 if (request.getHeaders("Upgrade").hasMoreElements()) {
                     return true;
                 }
-                URL testURL = new URL(newTarget + mapping + query);
+                var testURL = new URL(newTarget + mapping + query);
                 log.debug("Testing url of {}", testURL);
-                HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
+                var connection = (HttpURLConnection) testURL.openConnection();
                 connection.setConnectTimeout(5000);
                 connection.setInstanceFollowRedirects(false);
-                int responseCode = connection.getResponseCode();
+                var responseCode = connection.getResponseCode();
                 log.debug("received connection from {}, status code: {}", testURL, responseCode);
                 if (responseCode < 500) {
                     log.debug("successfully connected to target {}", testURL);
-                }else{
+                } else {
                     failedResponseCode[0] = responseCode;
                 }
                 return true;
-            }catch (IOException ioe) {
+            } catch (IOException ioe) {
                 failedResponseCode[0] = 404;
                 log.debug("Trying to connect target URL ({}/{})", i, 5);
             } catch (Exception e) {
                 failedResponseCode[0] = 500;
-                log.debug(e);
+                log.debug("an error occured: {}", e);
                 log.debug("Trying to connect target URL ({}/{})", i, 5);
             }
             return false;
-        }, 5, 2000, true);
+        }, 5, Duration.ofSeconds(2), true);
 
-        if (!targetConnected) {
+        if (!targetConnected.get()) {
             response.sendError(failedResponseCode[0]);
             return;
         }
         addMapping(proxyId, port_mapping, newTarget);
         proxy.getTargets().put(port_mapping, newTarget);
 
-        String queryString = request.getQueryString();
-        queryString = (queryString == null) ? "" : "?" + queryString;
-        String targetPath = PROXY_INTERNAL_ENDPOINT + "/" + port_mapping + mapping + queryString;
+        var targetPath = PROXY_INTERNAL_ENDPOINT + "/" + port_mapping + mapping + query;
         request.startAsync();
         request.getRequestDispatcher(targetPath).forward(request, response);
     }
@@ -228,10 +229,10 @@ public class ProxyMappingManager {
         @SuppressWarnings("unchecked")
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
-            Field field = PathHandler.class.getDeclaredField("pathMatcher");
+            var field = PathHandler.class.getDeclaredField("pathMatcher");
             field.setAccessible(true);
-            PathMatcher<HttpHandler> pathMatcher = (PathMatcher<HttpHandler>) field.get(this);
-            PathMatcher.PathMatch<HttpHandler> match = pathMatcher.match(exchange.getRelativePath());
+            var pathMatcher = (PathMatcher<HttpHandler>) field.get(this);
+            var match = pathMatcher.match(exchange.getRelativePath());
 
             // Note: this handler may never be accessed directly (because it bypasses Spring security).
             // Only allowed if the request was dispatched via this class.

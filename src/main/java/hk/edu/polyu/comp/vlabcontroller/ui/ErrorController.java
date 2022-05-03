@@ -2,7 +2,7 @@ package hk.edu.polyu.comp.vlabcontroller.ui;
 
 import hk.edu.polyu.comp.vlabcontroller.api.BaseController;
 import hk.edu.polyu.comp.vlabcontroller.auth.impl.keycloak.AuthenticationFailureHandler;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.adapters.OIDCAuthenticationError;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakCookieBasedRedirect;
 import org.springframework.http.HttpStatus;
@@ -21,37 +21,36 @@ import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
-@Log4j2
+@Slf4j
 @Controller
 @RequestMapping("/error")
 public class ErrorController extends BaseController implements org.springframework.boot.web.servlet.error.ErrorController {
-
     @RequestMapping(produces = "text/html")
     public String handleError(ModelMap map, HttpServletRequest request, HttpServletResponse response) {
 
         // handle keycloak errors
-        Object obj = request.getSession().getAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
+        var obj = request.getSession().getAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
         if (obj instanceof OIDCAuthenticationError.Reason) {
             request.getSession().removeAttribute(AuthenticationFailureHandler.SP_KEYCLOAK_ERROR_REASON);
-            OIDCAuthenticationError.Reason reason = (OIDCAuthenticationError.Reason) obj;
+            var reason = (OIDCAuthenticationError.Reason) obj;
             if (reason == OIDCAuthenticationError.Reason.INVALID_STATE_COOKIE ||
                     reason == OIDCAuthenticationError.Reason.STALE_TOKEN) {
                 // These errors are typically caused by users using wrong bookmarks (e.g. bookmarks with states in)
                 // or when some cookies got stale. However, the user is logged into the IDP, therefore it's enough to
                 // send the user to the main page, and they will get logged in automatically.
-                response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl((String) null));
+                response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl(null));
                 return "redirect:/";
             } else {
                 return "redirect:/auth-error";
             }
         }
 
-        Throwable exception = (Throwable) request.getAttribute("javax.servlet.error.exception");
+        var exception = (Throwable) request.getAttribute("javax.servlet.error.exception");
         if (exception == null) {
             exception = (Throwable) request.getAttribute("SPRING_SECURITY_LAST_EXCEPTION");
         }
 
-        String[] msg = createMsgStack(exception);
+        var msg = createMsgStack(exception);
         if (exception == null) {
             msg[0] = HttpStatus.valueOf(response.getStatus()).getReasonPhrase();
         }
@@ -62,7 +61,7 @@ public class ErrorController extends BaseController implements org.springframewo
 
         if (isIllegalStateException(exception)) {
             log.warn("No state cookie on login attempt, force redirect to homepage");
-            response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl((String) null));
+            response.addCookie(KeycloakCookieBasedRedirect.createCookieFromRedirectUrl(null));
             return "redirect:/";
         }
 
@@ -77,8 +76,8 @@ public class ErrorController extends BaseController implements org.springframewo
     @RequestMapping(consumes = "application/json", produces = "application/json")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> error(HttpServletRequest request, HttpServletResponse response) {
-        Throwable exception = (Throwable) request.getAttribute("javax.servlet.error.exception");
-        String[] msg = createMsgStack(exception);
+        var exception = (Throwable) request.getAttribute("javax.servlet.error.exception");
+        var msg = createMsgStack(exception);
 
         Map<String, Object> map = new HashMap<>();
         map.put("message", msg[0]);
@@ -92,16 +91,16 @@ public class ErrorController extends BaseController implements org.springframewo
     }
 
     private String[] createMsgStack(Throwable exception) {
-        String message = "";
-        String stackTrace = "";
+        var message = "";
+        var stackTrace = "";
 
         if (exception instanceof NestedServletException && exception.getCause() instanceof Exception) {
             exception = exception.getCause();
         }
         if (exception != null) {
             if (exception.getMessage() != null) message = exception.getMessage();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            try (PrintWriter writer = new PrintWriter(bos)) {
+            var bos = new ByteArrayOutputStream();
+            try (var writer = new PrintWriter(bos)) {
                 exception.printStackTrace(writer);
             }
             stackTrace = bos.toString();

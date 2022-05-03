@@ -1,18 +1,19 @@
 package hk.edu.polyu.comp.vlabcontroller.model.runtime;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
-import org.apache.commons.lang.StringUtils;
+import lombok.*;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 @ToString
+@Data @Builder(toBuilder = true)
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProxyMappingMetadata {
-    @Getter private URI defaultTarget;
-    @Getter @Setter private List<PortMappingMetadata> portMappingMetadataList = new ArrayList<>();
+    @Setter(AccessLevel.NONE) private URI defaultTarget;
+    @Singular("portMappingMetadata") private List<PortMappingMetadata> portMappingMetadataList = new ArrayList<>();
 
     public void setDefaultTarget(URI defaultTarget) {
         // Can't be updated if set
@@ -26,7 +27,7 @@ public class ProxyMappingMetadata {
     }
 
     public boolean containsMappingPathPrefix(String prefix) {
-        String path = StringUtils.removeEnd(prefix, "/");
+        var path = StringUtils.removeEnd(prefix, "/");
         return portMappingMetadataList.stream().anyMatch(p -> p.getPortMapping().startsWith(path));
     }
 }

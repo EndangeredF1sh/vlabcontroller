@@ -1,12 +1,12 @@
 package hk.edu.polyu.comp.vlabcontroller.api;
 
-import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
+import hk.edu.polyu.comp.vlabcontroller.config.ServerProperties;
 import hk.edu.polyu.comp.vlabcontroller.service.ProxyService;
 import hk.edu.polyu.comp.vlabcontroller.service.UserService;
 import hk.edu.polyu.comp.vlabcontroller.util.ProxyMappingManager;
 import hk.edu.polyu.comp.vlabcontroller.util.SessionHelper;
-import org.apache.commons.lang.StringUtils;
-import org.springframework.core.env.Environment;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -14,37 +14,31 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 @Controller
+@RequiredArgsConstructor
 public class ProxyRouteController extends BaseController {
     private final UserService userService;
     private final ProxyService proxyService;
     private final ProxyMappingManager mappingManager;
-    private final Environment environment;
-
-    public ProxyRouteController(UserService userService, ProxyService proxyService, ProxyMappingManager mappingManager, Environment environment) {
-        this.userService = userService;
-        this.proxyService = proxyService;
-        this.mappingManager = mappingManager;
-        this.environment = environment;
-    }
+    private final ServerProperties serverProperties;
 
     @RequestMapping(value = "/api/route/**")
     public void route(HttpServletRequest request, HttpServletResponse response) {
         try {
-            String baseURL = SessionHelper.getContextPath(environment, true) + "api/route/";
-            String mapping = request.getRequestURI().substring(baseURL.length()).replaceAll("/{2,}", "/");
-            String proxyId = mappingManager.getProxyId(mapping);
-            String prefix = proxyId;
+            var baseURL = SessionHelper.getContextPath(serverProperties, true) + "api/route/";
+            var mapping = request.getRequestURI().substring(baseURL.length()).replaceAll("/{2,}", "/");
+            var proxyId = mappingManager.getProxyId(mapping);
+            var prefix = proxyId;
             if (proxyId != null) {
-                boolean isAdmin = userService.isAdmin();
-                Proxy proxy = proxyService.findProxy(p -> proxyId.equals(p.getId()), true);
-                String[] path = mapping.split("/");
-                String mappingType = path.length > 1 ? path[1] : "";
-                int targetPort = -1;
-                boolean hasAccess = userService.isOwner(proxy);
+                var isAdmin = userService.isAdmin();
+                var proxy = proxyService.findProxy(p -> proxyId.equals(p.getId()), true);
+                var path = mapping.split("/");
+                var mappingType = path.length > 1 ? path[1] : "";
+                var targetPort = -1;
+                var hasAccess = userService.isOwner(proxy);
                 if (("/" + mappingType).equals(mappingManager.getProxyPortMappingsEndpoint())) {
-                    String portString = path[2];
+                    var portString = path[2];
                     if (portString != null) {
-                        int port = Integer.parseInt(portString);
+                        var port = Integer.parseInt(portString);
                         if (port < 0 || port > 65535) {
                             response.sendError(404, "Invalid port");
                         } else {
@@ -54,7 +48,7 @@ public class ProxyRouteController extends BaseController {
                     }
                 }
                 if (hasAccess || isAdmin) {
-                    String subPath = StringUtils.substringAfter(mapping, prefix);
+                    var subPath = StringUtils.substringAfter(mapping, prefix);
                     if (subPath.trim().isEmpty()) {
                         response.sendRedirect(request.getRequestURI() + "/");
                         return;

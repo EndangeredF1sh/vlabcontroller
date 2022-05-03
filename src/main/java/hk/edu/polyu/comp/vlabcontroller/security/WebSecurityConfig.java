@@ -2,11 +2,14 @@ package hk.edu.polyu.comp.vlabcontroller.security;
 
 import hk.edu.polyu.comp.vlabcontroller.auth.IAuthenticationBackend;
 import hk.edu.polyu.comp.vlabcontroller.auth.UserLogoutHandler;
+import hk.edu.polyu.comp.vlabcontroller.config.ServerProperties;
+import io.vavr.control.Option;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -15,37 +18,29 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.annotation.web.configurers.ExpressionUrlAuthorizationConfigurer;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import javax.inject.Inject;
 import java.util.List;
+
+import static io.vavr.API.*;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
-
-    @Inject
-    private UserLogoutHandler logoutHandler;
-
-    @Inject
-    private IAuthenticationBackend auth;
-
-    @Inject
-    private AuthenticationEventPublisher eventPublisher;
-
-    @Inject
-    private Environment environment;
-
-    @Autowired(required = false)
+    private final UserLogoutHandler logoutHandler;
+    private final IAuthenticationBackend auth;
+    private final AuthenticationEventPublisher eventPublisher;
+    private final ServerProperties serverProperties;
+    @Setter(onMethod_ = {@Autowired(required = false)})
     private List<ICustomSecurityConfig> customConfigs;
 
     @Override
     public void configure(WebSecurity web) {
         if (customConfigs != null) {
-            for (ICustomSecurityConfig cfg : customConfigs) {
+            for (var cfg : customConfigs) {
                 try {
                     cfg.apply(web);
                 } catch (Exception e) {
@@ -64,26 +59,21 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.csrf().requireCsrfProtectionMatcher(new AntPathRequestMatcher("/login", "POST"));
 
         // Always set header: X-Content-Type-Options=nosniff
-        http.headers().contentTypeOptions();
+        var headers = http.headers();
+        var frameOptionsConfig = headers.frameOptions();
+        headers.contentTypeOptions();
 
-        String frameOptions = environment.getProperty("server.frameOptions", "disable");
-        switch (frameOptions.toUpperCase()) {
-            case "DISABLE":
-                http.headers().frameOptions().disable();
-                break;
-            case "DENY":
-                http.headers().frameOptions().deny();
-                break;
-            case "SAMEORIGIN":
-                http.headers().frameOptions().sameOrigin();
-                break;
-            default:
-                if (frameOptions.toUpperCase().startsWith("ALLOW-FROM")) {
-                    http.headers()
-                            .frameOptions().disable()
-                            .addHeaderWriter(new StaticHeadersWriter("X-Frame-Options", frameOptions));
+        var frameOptions = serverProperties.getFrameOptions();
+        Match(frameOptions.toUpperCase()).of(
+            Case($("DISABLE"), () -> run(frameOptionsConfig::disable)),
+            Case($("DENY"), () -> run(frameOptionsConfig::deny)),
+            Case($("SAMEORIGIN"), () -> run(frameOptionsConfig::sameOrigin)),
+            Case($(), cappedFrameOptions -> run(() -> {
+                if (cappedFrameOptions.startsWith("ALLOW-FROM")) {
+                    frameOptionsConfig.disable().addHeaderWriter(new StaticHeadersWriter("X-Frame-Options", frameOptions));
                 }
-        }
+            }))
+        );
 
         // Allow public access to health endpoint
         http.authorizeRequests().antMatchers("/actuator/health").permitAll();
@@ -92,9 +82,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.authorizeRequests().antMatchers("/actuator/prometheus").permitAll();
 
         // Note: call early, before http.authorizeRequests().anyRequest().fullyAuthenticated();
-        if (customConfigs != null) {
-            for (ICustomSecurityConfig cfg : customConfigs) cfg.apply(http);
-        }
+        for (var cfg : Option.of(customConfigs).getOrElse(List.of())) cfg.apply(http);
 
 
         if (auth.hasAuthorization()) {
@@ -120,12 +108,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         if (auth.hasAuthorization()) {
             // The `anyRequest` method may only be called once.
             // Therefore we call it here, make our changes to it and forward it to the various authentication backends
-            ExpressionUrlAuthorizationConfigurer<HttpSecurity>.AuthorizedUrl anyRequestConfigurer = http.authorizeRequests().anyRequest();
+            var anyRequestConfigurer = http.authorizeRequests().anyRequest();
             anyRequestConfigurer.fullyAuthenticated();
             auth.configureHttpSecurity(http, anyRequestConfigurer);
         }
-
-
     }
 
     @Bean

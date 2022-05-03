@@ -1,12 +1,20 @@
 package hk.edu.polyu.comp.vlabcontroller.stat.impl;
 
-import hk.edu.polyu.comp.vlabcontroller.stat.IStatCollector;
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
 import hk.edu.polyu.comp.vlabcontroller.event.*;
+import hk.edu.polyu.comp.vlabcontroller.stat.IStatCollector;
+import lombok.Setter;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.event.EventListener;
 
+import javax.inject.Inject;
 import java.io.IOException;
 
+@RefreshScope
 public abstract class AbstractDbCollector implements IStatCollector {
+    @Setter(onMethod_ = {@Inject})
+    protected ProxyProperties proxyProperties;
+
     @EventListener
     public void onUserLogoutEvent(UserLogoutEvent event) throws IOException {
         writeToDb(event.getTimestamp(), event.getUserId(), "Logout", null, String.valueOf(event.getWasExpired()));

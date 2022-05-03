@@ -1,7 +1,9 @@
 package hk.edu.polyu.comp.vlabcontroller.api;
 
+import hk.edu.polyu.comp.vlabcontroller.config.ProxyProperties;
+import lombok.Setter;
 import lombok.experimental.StandardException;
-import org.springframework.core.env.Environment;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -11,13 +13,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 import javax.inject.Inject;
 
+@RefreshScope
 public class BaseController {
-
-    @Inject
-    private Environment environment;
+    @Setter(onMethod_ = {@Inject})
+    protected ProxyProperties proxyProperties;
 
     protected void prepareMap(ModelMap map) {
-        map.put("title", environment.getProperty("proxy.title", "VLabController"));
+        map.put("title", proxyProperties.getTitle());
     }
 
     @StandardException
