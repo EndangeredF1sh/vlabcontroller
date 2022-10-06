@@ -100,7 +100,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         if (auth.hasAuthorization()) {
             http.authorizeRequests().antMatchers(
                     "/login", "/auth-error", "/app-access-denied", "/logout-success", "/error",
-                    "/favicon.ico", "/assets/**").permitAll();
+                    "/favicon.ico", "/assets/**", "/clearcookies").permitAll();
             http
                     .formLogin()
                     .loginPage("/login")
