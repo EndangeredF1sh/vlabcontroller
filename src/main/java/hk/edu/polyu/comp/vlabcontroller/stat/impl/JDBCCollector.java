@@ -1,15 +1,14 @@
 package hk.edu.polyu.comp.vlabcontroller.stat.impl;
 
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.core.env.Environment;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
 
 /**
  * # MonetDB, Postgresql, MySQL/MariaDB usage-stats-url:
@@ -33,13 +32,15 @@ import java.sql.Timestamp;
  */
 public class JDBCCollector extends AbstractDbCollector {
 
+    private final Logger log = LogManager.getLogger(getClass());
+
     private HikariDataSource ds;
 
     @Inject
     private Environment environment;
 
     @PostConstruct
-    public void init() {
+    public void init() throws IOException {
         String baseURL = environment.getProperty("proxy.usage-stats-url.jdbc-url");
         String username = environment.getProperty("proxy.usage-stats-username", "monetdb");
         String password = environment.getProperty("proxy.usage-stats-password", "monetdb");
@@ -75,12 +76,20 @@ public class JDBCCollector extends AbstractDbCollector {
             ds.setMaximumPoolSize(maximumPoolSize);
         }
 
+        try (Connection con = ds.getConnection()) {
+            Statement statement = con.createStatement();
+            statement.executeUpdate("CREATE TABLE event(event_time TIMESTAMP, username VARCHAR(128), type VARCHAR(128), specid VARCHAR(128), identifier VARCHAR(128), template_name VARCHAR(128), info TEXT)");
+        } catch (SQLSyntaxErrorException syntaxErrorException) {
+            log.info("Skipping create event table, code: {}, message: {}", syntaxErrorException.getErrorCode(), syntaxErrorException.getMessage());
+        } catch (SQLException e) {
+            throw new IOException("Exception while initializing table", e);
+        }
     }
 
     @Override
-    protected void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException {
+    protected void writeToDb(long timestamp, String userId, String type, String specId, String templateName, String info) throws IOException {
         String identifier = environment.getProperty("proxy.identifier-value", "default-identifier");
-        String sql = "INSERT INTO event(event_time, username, type, specid, identifier, info) VALUES (?,?,?,?,?,?)";
+        String sql = "INSERT INTO event(event_time, username, type, specid, identifier, template_name, info) VALUES (?,?,?,?,?,?,?)";
         try (Connection con = ds.getConnection()) {
             try (PreparedStatement stmt = con.prepareStatement(sql)) {
                 stmt.setTimestamp(1, new Timestamp(timestamp));
@@ -88,7 +97,8 @@ public class JDBCCollector extends AbstractDbCollector {
                 stmt.setString(3, type);
                 stmt.setString(4, specId);
                 stmt.setString(5, identifier);
-                stmt.setString(6, info);
+                stmt.setString(6, templateName);
+                stmt.setString(7, info);
                 stmt.executeUpdate();
             }
         } catch (SQLException e) {

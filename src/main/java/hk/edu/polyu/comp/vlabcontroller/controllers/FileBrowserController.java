@@ -90,6 +90,7 @@ public class FileBrowserController extends BaseController {
         fbp.copy(spec);
         spec.setId("filebrowser");
         spec.setDisplayName("File Browser");
+        spec.setTemplateName("File Browser");
         return spec;
     }
 

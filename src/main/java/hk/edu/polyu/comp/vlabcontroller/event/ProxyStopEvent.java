@@ -12,11 +12,14 @@ public class ProxyStopEvent extends ApplicationEvent {
     private final String specId;
     @Getter
     private final Duration usageTime;
+    @Getter
+    private final String templateName;
 
-    public ProxyStopEvent(Object source, String userId, String specId, Duration usageTime) {
+    public ProxyStopEvent(Object source, String userId, String specId, Duration usageTime, String templateName) {
         super(source);
         this.userId = userId;
         this.specId = specId;
         this.usageTime = usageTime;
+        this.templateName = templateName;
     }
 }

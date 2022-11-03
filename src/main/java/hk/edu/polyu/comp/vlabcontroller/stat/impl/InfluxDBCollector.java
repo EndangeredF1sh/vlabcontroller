@@ -30,13 +30,14 @@ public class InfluxDBCollector extends AbstractDbCollector {
     }
 
     @Override
-    protected void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException {
+    protected void writeToDb(long timestamp, String userId, String type, String specId, String templateName, String info) throws IOException {
         String identifier = environment.getProperty("proxy.identifier-value", "default-identifier");
-        String body = String.format("event,username=%s,type=%s,identifier=%s specid=\"%s\",info=\"%s\"",
+        String body = String.format("event,username=%s,type=%s,identifier=%s specid=\"%s\",template_name=\"%s\",info=\"%s\"",
                 userId.replace(" ", "\\ "),
                 type.replace(" ", "\\ "),
                 identifier.replace(" ", "\\ "),
                 Optional.ofNullable(specId).orElse(""),
+                Optional.ofNullable(templateName).orElse(""),
                 Optional.ofNullable(info).orElse(""));
 
         HttpURLConnection conn = (HttpURLConnection) new URL(destination).openConnection();

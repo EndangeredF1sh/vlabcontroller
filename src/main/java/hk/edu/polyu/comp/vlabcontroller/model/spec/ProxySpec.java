@@ -42,6 +42,9 @@ public class ProxySpec {
     @Getter
     @Setter
     private String defaultTutorialLink;
+    @Getter
+    @Setter
+    private String templateName;
 
     public void setContainerSpecs(List<ContainerSpec> containerSpecs) {
         this.containerSpecs = containerSpecs;
@@ -55,6 +58,7 @@ public class ProxySpec {
         target.setDescription(description);
         target.setLogoURL(logoURL);
         target.setDefaultTutorialLink(defaultTutorialLink);
+        target.setTemplateName(templateName);
 
         target.getAccessGroups().addAll(accessGroups);
 

@@ -9,22 +9,22 @@ import java.io.IOException;
 public abstract class AbstractDbCollector implements IStatCollector {
     @EventListener
     public void onUserLogoutEvent(UserLogoutEvent event) throws IOException {
-        writeToDb(event.getTimestamp(), event.getUserId(), "Logout", null, String.valueOf(event.getWasExpired()));
+        writeToDb(event.getTimestamp(), event.getUserId(), "Logout", null, null, String.valueOf(event.getWasExpired()));
     }
 
     @EventListener
     public void onUserLoginEvent(UserLoginEvent event) throws IOException {
-        writeToDb(event.getTimestamp(), event.getUserId(), "Login", null, null);
+        writeToDb(event.getTimestamp(), event.getUserId(), "Login", null, null,null);
     }
 
     @EventListener
     public void onProxyStartEvent(ProxyStartEvent event) throws IOException {
-        writeToDb(event.getTimestamp(), event.getUserId(), "ProxyStart", event.getSpecId(), String.valueOf(event.getStartupTime().toMillis()));
+        writeToDb(event.getTimestamp(), event.getUserId(), "ProxyStart", event.getSpecId(), event.getTemplateName(), String.valueOf(event.getStartupTime().toMillis()));
     }
 
     @EventListener
     public void onProxyStopEvent(ProxyStopEvent event) throws IOException {
-        writeToDb(event.getTimestamp(), event.getUserId(), "ProxyStop", event.getSpecId(), String.valueOf(event.getUsageTime().toMillis()));
+        writeToDb(event.getTimestamp(), event.getUserId(), "ProxyStop", event.getSpecId(), event.getTemplateName(), String.valueOf(event.getUsageTime().toMillis()));
     }
 
     @EventListener
@@ -37,6 +37,6 @@ public abstract class AbstractDbCollector implements IStatCollector {
         // TODO
     }
 
-    protected abstract void writeToDb(long timestamp, String userId, String type, String specId, String info) throws IOException;
+    protected abstract void writeToDb(long timestamp, String userId, String type, String specId, String templateName, String info) throws IOException;
 
 }

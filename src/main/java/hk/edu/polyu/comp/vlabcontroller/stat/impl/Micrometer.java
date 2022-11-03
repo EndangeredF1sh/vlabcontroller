@@ -54,21 +54,21 @@ public class Micrometer implements IStatCollector {
 
     @EventListener
     public void onProxyStartEvent(ProxyStartEvent event) {
-        logger.debug("ProxyStartEvent [user: {}, startupTime: {}]", event.getUserId(), event.getStartupTime());
-        registry.counter("appStarts", "spec.id", event.getSpecId(), "user.id", event.getUserId()).increment();
-        registry.timer("startupTime", "spec.id", event.getSpecId(), "user.id", event.getUserId()).record(event.getStartupTime());
+        logger.debug("ProxyStartEvent [user: {}, startupTime: {}, specId: {}, templateName: {}]", event.getUserId(), event.getStartupTime(), event.getSpecId(), event.getTemplateName());
+        registry.counter("appStarts", "spec.id", event.getSpecId(), "user.id", event.getUserId(), "template.name", event.getTemplateName()).increment();
+        registry.timer("startupTime", "spec.id", event.getSpecId(), "user.id", event.getUserId(), "template.name", event.getTemplateName()).record(event.getStartupTime());
     }
 
     @EventListener
     public void onProxyStopEvent(ProxyStopEvent event) {
-        logger.debug("ProxyStopEvent [user: {}, usageTime: {}]", event.getUserId(), event.getUsageTime());
-        registry.counter("appStops", "spec.id", event.getSpecId(), "user.id", event.getUserId()).increment();
-        registry.timer("usageTime", "spec.id", event.getSpecId(), "user.id", event.getUserId()).record(event.getUsageTime());
+        logger.debug("ProxyStopEvent [user: {}, usageTime: {}, specId: {}, templateName: {}]", event.getUserId(), event.getUsageTime(), event.getSpecId(), event.getTemplateName());
+        registry.counter("appStops", "spec.id", event.getSpecId(), "user.id", event.getUserId(), "template.name", event.getTemplateName()).increment();
+        registry.timer("usageTime", "spec.id", event.getSpecId(), "user.id", event.getUserId(), "template.name", event.getTemplateName()).record(event.getUsageTime());
     }
 
     @EventListener
     public void onProxyStartFailedEvent(ProxyStartFailedEvent event) {
-        logger.debug("ProxyStartFailedEvent [user: {}, specId: {}]", event.getUserId(), event.getSpecId());
+        logger.debug("ProxyStartFailedEvent [user: {}, specId: {}, templateName: {}]", event.getUserId(), event.getSpecId(), event.getTemplateName());
         appStartFailedCounter.increment();
     }
 

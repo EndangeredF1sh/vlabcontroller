@@ -12,11 +12,14 @@ public class ProxyStartEvent extends ApplicationEvent {
     private final String specId;
     @Getter
     private final Duration startupTime;
+    @Getter
+    private final String templateName;
 
-    public ProxyStartEvent(Object source, String userId, String specId, Duration startupTime) {
+    public ProxyStartEvent(Object source, String userId, String specId, Duration startupTime, String templateName) {
         super(source);
         this.userId = userId;
         this.specId = specId;
         this.startupTime = startupTime;
+        this.templateName = templateName;
     }
 }
