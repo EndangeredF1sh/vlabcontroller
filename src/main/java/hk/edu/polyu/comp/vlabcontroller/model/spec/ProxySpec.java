@@ -44,7 +44,7 @@ public class ProxySpec {
     private String defaultTutorialLink;
     @Getter
     @Setter
-    private String templateName;
+    private String templateName = "";
 
     public void setContainerSpecs(List<ContainerSpec> containerSpecs) {
         this.containerSpecs = containerSpecs;
