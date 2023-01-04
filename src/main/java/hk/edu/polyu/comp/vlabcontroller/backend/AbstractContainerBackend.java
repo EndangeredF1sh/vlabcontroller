@@ -58,6 +58,7 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected static final String RUNTIME_LABEL_CREATED_TIMESTAMP = "comp.polyu.edu.hk/vl-proxy-created-timestamp";
     protected static final String RUNTIME_LABEL_PROXIED_APP = "comp.polyu.edu.hk/vl-proxied-app";
     protected static final String RUNTIME_LABEL_INSTANCE = "comp.polyu.edu.hk/vl-instance";
+    protected static final String RUNTIME_LABEL_TEMPLATE_NAME = "comp.polyu.edu.hk/vl-template-name";
 
     protected final Logger log = LogManager.getLogger(getClass());
     @Inject
@@ -129,6 +130,7 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
             // add labels need for App Recovery and maintenance
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXIED_APP, true, "true");
             spec.addRuntimeLabel(RUNTIME_LABEL_INSTANCE, true, instanceId);
+            spec.addRuntimeLabel(RUNTIME_LABEL_TEMPLATE_NAME, true, proxy.getSpec().getTemplateName());
 
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_ID, true, proxy.getId());
             spec.addRuntimeLabel(RUNTIME_LABEL_PROXY_SPEC_ID, true, proxy.getSpec().getId());
