@@ -172,42 +172,44 @@ public class ProxyMappingManager {
         String port_mapping = proxyId + PROXY_PORT_MAPPINGS_ENDPOINT + "/" + port;
         URI newTarget = new URI(defaultTarget.getScheme() + "://" + defaultTarget.getHost() + ":" + port);
         int[] failedResponseCode = new int[1];
-        boolean targetConnected = Retrying.retry(i -> {
-            try {
-                String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
-                log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Collections.list(request.getHeaderNames()));
+        if (!proxy.getSpec().isDisableProxyProbe()) {
+            boolean targetConnected = Retrying.retry(i -> {
+                try {
+                    String query = request.getQueryString() == null ? "" : "?" + request.getQueryString();
+                    log.debug("request protocol: {}, scheme: {}, headers: {}", request.getProtocol(), request.getScheme(), Collections.list(request.getHeaderNames()));
 
-                // Handle websocket case
-                if (request.getHeaders("Upgrade").hasMoreElements()) {
+                    // Handle websocket case
+                    if (request.getHeaders("Upgrade").hasMoreElements()) {
+                        return true;
+                    }
+                    URL testURL = new URL(newTarget + mapping + query);
+                    log.debug("Testing url of {}", testURL);
+                    HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
+                    connection.setConnectTimeout(5000);
+                    connection.setInstanceFollowRedirects(false);
+                    int responseCode = connection.getResponseCode();
+                    log.debug("received connection from {}, status code: {}", testURL, responseCode);
+                    if (responseCode < 500) {
+                        log.debug("successfully connected to target {}", testURL);
+                    }else{
+                        failedResponseCode[0] = responseCode;
+                    }
                     return true;
+                }catch (IOException ioe) {
+                    failedResponseCode[0] = 404;
+                    log.debug("Trying to connect target URL ({}/{})", i, 5);
+                } catch (Exception e) {
+                    failedResponseCode[0] = 500;
+                    log.debug(e);
+                    log.debug("Trying to connect target URL ({}/{})", i, 5);
                 }
-                URL testURL = new URL(newTarget + mapping + query);
-                log.debug("Testing url of {}", testURL);
-                HttpURLConnection connection = (HttpURLConnection) testURL.openConnection();
-                connection.setConnectTimeout(5000);
-                connection.setInstanceFollowRedirects(false);
-                int responseCode = connection.getResponseCode();
-                log.debug("received connection from {}, status code: {}", testURL, responseCode);
-                if (responseCode < 500) {
-                    log.debug("successfully connected to target {}", testURL);
-                }else{
-                    failedResponseCode[0] = responseCode;
-                }
-                return true;
-            }catch (IOException ioe) {
-                failedResponseCode[0] = 404;
-                log.debug("Trying to connect target URL ({}/{})", i, 5);
-            } catch (Exception e) {
-                failedResponseCode[0] = 500;
-                log.debug(e);
-                log.debug("Trying to connect target URL ({}/{})", i, 5);
-            }
-            return false;
-        }, 5, 2000, true);
+                return false;
+            }, 5, 2000, true);
 
-        if (!targetConnected) {
-            response.sendError(failedResponseCode[0]);
-            return;
+            if (!targetConnected) {
+                response.sendError(failedResponseCode[0]);
+                return;
+            }
         }
         addMapping(proxyId, port_mapping, newTarget);
         proxy.getTargets().put(port_mapping, newTarget);

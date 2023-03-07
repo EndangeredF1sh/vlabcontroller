@@ -45,6 +45,9 @@ public class ProxySpec {
     @Getter
     @Setter
     private String templateName = "";
+    @Getter
+    @Setter
+    private boolean disableProxyProbe = false;
 
     public void setContainerSpecs(List<ContainerSpec> containerSpecs) {
         this.containerSpecs = containerSpecs;
@@ -59,6 +62,7 @@ public class ProxySpec {
         target.setLogoURL(logoURL);
         target.setDefaultTutorialLink(defaultTutorialLink);
         target.setTemplateName(templateName);
+        target.setDisableProxyProbe(disableProxyProbe);
 
         target.getAccessGroups().addAll(accessGroups);
 
