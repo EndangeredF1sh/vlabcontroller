@@ -26,6 +26,9 @@ public class Proxy {
     private long createdTimestamp;
     @Getter
     @Setter
+    private long expirationTimestamp;
+    @Getter
+    @Setter
     private String userId;
     @Getter
     @Setter

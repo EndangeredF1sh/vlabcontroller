@@ -1,72 +1,81 @@
 package hk.edu.polyu.comp.vlabcontroller.api;
 
+import hk.edu.polyu.comp.vlabcontroller.model.runtime.API.APIResponseBody;
 import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
-import hk.edu.polyu.comp.vlabcontroller.model.runtime.RuntimeSetting;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ProxySpec;
-import hk.edu.polyu.comp.vlabcontroller.service.ProxyService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Set;
 
 @RestController
 public class ProxyController extends BaseController {
-    private final ProxyService proxyService;
-
-    public ProxyController(ProxyService proxyService) {
-        this.proxyService = proxyService;
-    }
+    private final Logger log = LogManager.getLogger(ProxyController.class);
 
     @GetMapping(value = "/api/proxyspec", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<ProxySpec> listProxySpecs() {
-        return proxyService.getProxySpecs(null, false);
+    public ResponseEntity<APIResponseBody<List<ProxySpec>>> listProxySpecs() {
+        return APIResponseBody.success(proxyService.getProxySpecs(null, false));
     }
 
     @GetMapping(value = "/api/proxyspec/{proxySpecId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ProxySpec> getProxySpec(@PathVariable String proxySpecId) {
+    public ResponseEntity<APIResponseBody<ProxySpec>> getProxySpec(@PathVariable String proxySpecId) {
         ProxySpec spec = proxyService.findProxySpec(s -> s.getId().equals(proxySpecId), false);
         if (spec == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        return new ResponseEntity<>(spec, HttpStatus.OK);
+        return APIResponseBody.success(spec);
     }
 
     @GetMapping(value = "/api/proxy", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<Proxy> listProxies() {
-        return proxyService.getProxies(null, false);
+    public ResponseEntity<APIResponseBody<List<Proxy>>> listProxies() {
+        return APIResponseBody.success(proxyService.getProxies(null, false));
     }
 
     @GetMapping(value = "/api/proxy/{proxyId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Proxy> getProxy(@PathVariable String proxyId) {
+    public ResponseEntity<APIResponseBody<Proxy>> getProxy(@PathVariable String proxyId) {
         Proxy proxy = proxyService.findProxy(p -> p.getId().equals(proxyId), false);
-        if (proxy == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        return new ResponseEntity<>(proxy, HttpStatus.OK);
-    }
-
-    @PostMapping(value = "/api/proxy/{proxySpecId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Proxy> startProxy(@PathVariable String proxySpecId, @RequestBody(required = false) Set<RuntimeSetting> runtimeSettings) {
-        ProxySpec baseSpec = proxyService.findProxySpec(s -> s.getId().equals(proxySpecId), false);
-        if (baseSpec == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-
-        ProxySpec spec = proxyService.resolveProxySpec(baseSpec, null, runtimeSettings);
-        Proxy proxy = proxyService.startProxy(spec, false);
-        return new ResponseEntity<>(proxy, HttpStatus.CREATED);
+        if (proxy == null) return APIResponseBody.resourceNotFound();
+        return APIResponseBody.success(proxy);
     }
 
     @PostMapping(value = "/api/proxy", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Proxy> startProxy(@RequestBody ProxySpec proxySpec) {
-        ProxySpec spec = proxyService.resolveProxySpec(null, proxySpec, null);
-        Proxy proxy = proxyService.startProxy(spec, false);
-        return new ResponseEntity<>(proxy, HttpStatus.CREATED);
+    public ResponseEntity<APIResponseBody<Proxy>> startProxy(@RequestParam String proxySpecId) {
+        ProxySpec baseSpec = proxyService.findProxySpec(s -> s.getId().equals(proxySpecId), false);
+        if (baseSpec == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+        Proxy proxy = findUserProxy(proxySpecId);
+        if (proxy != null) {
+            return APIResponseBody.success(proxy);
+        }
+
+        if (!userService.isAdmin()) {
+            int containerLimit = environment.getProperty("proxy.container-quantity-limit", Integer.class, 2);
+            int proxyCount = proxyService.getProxies(p -> p.getUserId().equals(userService.getCurrentUserId()) && !p.getSpec().getId().equals("filebrowser"), false).size();
+            if (proxyCount >= containerLimit) {
+                return APIResponseBody.failed("Exceed the container limit");
+            }
+        }
+
+        ProxySpec spec = proxyService.resolveProxySpec(baseSpec, null, null);
+        proxy = proxyService.startProxy(spec, false);
+        return APIResponseBody.success(proxy);
     }
 
+//    @PostMapping(value = "/api/proxy", produces = MediaType.APPLICATION_JSON_VALUE)
+//    public ResponseEntity<Proxy> startProxy(@RequestBody ProxySpec proxySpec) {
+//        ProxySpec spec = proxyService.resolveProxySpec(null, proxySpec, null);
+//        Proxy proxy = proxyService.startProxy(spec, false);
+//        return new ResponseEntity<>(proxy, HttpStatus.CREATED);
+//    }
+
     @DeleteMapping(value = "/api/proxy/{proxyId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> stopProxy(@PathVariable String proxyId) {
+    public ResponseEntity<APIResponseBody<Proxy>> stopProxy(@PathVariable String proxyId) {
         Proxy proxy = proxyService.findProxy(p -> p.getId().equals(proxyId), false);
-        if (proxy == null) return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        if (proxy == null) return APIResponseBody.resourceNotFound();
 
         proxyService.stopProxy(proxy, true, false, 0);
-        return new ResponseEntity<>("Proxy stopped", HttpStatus.OK);
+        return APIResponseBody.success();
     }
 }

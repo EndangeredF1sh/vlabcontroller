@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
@@ -109,7 +110,10 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
                 throw new VLabControllerException("Container did not respond in time");
             }
 
-            proxy.setStartupTimestamp(System.currentTimeMillis());
+            long currentTimestamp = System.currentTimeMillis();
+            long maxAgeDurationMs = Duration.parse(environment.getProperty("proxy.engagement.max-age", "PT4H")).toMillis();
+            proxy.setStartupTimestamp(currentTimestamp);
+            proxy.setExpirationTimestamp(currentTimestamp + maxAgeDurationMs);
             proxy.setStatus(ProxyStatus.Up);
 
         } catch (VLabControllerException e) {
