@@ -45,7 +45,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected static final String PROPERTY_URL = "url";
     protected static final String PROPERTY_CERT_PATH = "cert-path";
     protected static final String PROPERTY_CONTAINER_PROTOCOL = "container-protocol";
-    protected static final String PROPERTY_PRIVILEGED = "privileged";
 
     protected static final String DEFAULT_TARGET_PROTOCOL = "http";
 
@@ -78,13 +77,11 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected IAuthenticationBackend authBackend;
     protected String instanceId = null;
     private boolean useInternalNetwork;
-    private boolean privileged;
 
     @Override
     public void initialize() throws VLabControllerException {
         // If this application runs as a container itself, things like port publishing can be omitted.
         useInternalNetwork = Boolean.parseBoolean(getProperty(PROPERTY_INTERNAL_NETWORKING, "false"));
-        privileged = Boolean.parseBoolean(getProperty(PROPERTY_PRIVILEGED, "false"));
         try {
             instanceId = calculateInstanceId();
             log.info("Hash of config is: " + instanceId);
@@ -235,11 +232,6 @@ public abstract class AbstractContainerBackend implements IContainerBackend {
     protected boolean isUseInternalNetwork() {
         return useInternalNetwork;
     }
-
-    protected boolean isPrivileged() {
-        return privileged;
-    }
-
 
     private File getPathToConfigFile() {
         String path = environment.getProperty("spring.config.location");

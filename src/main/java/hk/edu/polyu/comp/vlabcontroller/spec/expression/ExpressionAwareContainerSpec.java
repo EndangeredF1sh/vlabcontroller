@@ -4,6 +4,7 @@ import hk.edu.polyu.comp.vlabcontroller.model.runtime.Proxy;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.EntryPointSpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ContainerSpec;
 import hk.edu.polyu.comp.vlabcontroller.model.spec.ResourceSpec;
+import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import org.springframework.data.util.Pair;
@@ -80,8 +81,8 @@ public class ExpressionAwareContainerSpec extends ContainerSpec {
         return resourceSpec;
     }
 
-    public boolean isPrivileged() {
-        return source.isPrivileged();
+    public SecurityContext getSecurityContext() {
+        return source.getSecurityContext();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package hk.edu.polyu.comp.vlabcontroller.model.spec;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.VolumeMount;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,7 +42,7 @@ public class ContainerSpec {
     private Map<String, Integer> portMapping = new HashMap<>();
     @Getter
     @Setter
-    private boolean privileged;
+    private SecurityContext securityContext;
     @Getter
     @Setter
     private ResourceSpec resources = new ResourceSpec();
@@ -105,7 +106,7 @@ public class ContainerSpec {
         target.getPortMapping().putAll(portMapping);
         target.getPortMapping().putAll(entryPoints.stream().collect(Collectors.toMap(x -> String.format("port_mappings/%d", x.getPort()), EntryPointSpec::getPort)));
         target.setResources(resources);
-        target.setPrivileged(privileged);
+        target.setSecurityContext(securityContext);
         target.getVolumeMounts().addAll(volumeMounts);
         target.getAdminVolumeMounts().addAll(adminVolumeMounts);
         target.getSettings().putAll(settings);

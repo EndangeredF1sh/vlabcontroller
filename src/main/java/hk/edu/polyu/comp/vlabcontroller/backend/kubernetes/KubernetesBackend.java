@@ -204,9 +204,7 @@ public class KubernetesBackend extends AbstractContainerBackend {
                             .flatMap(Optional::stream)
                             .collect(Collectors.toList());
 
-                    var security = new SecurityContextBuilder()
-                            .withPrivileged(isPrivileged() || spec.isPrivileged())
-                            .build();
+                    var security = spec.getSecurityContext();
 
                     var toQuantity = (Function<String, Quantity>) (String x) -> Optional.ofNullable(x).map(Quantity::new).orElse(null);
                     var containerBuilder = new ContainerBuilder()
