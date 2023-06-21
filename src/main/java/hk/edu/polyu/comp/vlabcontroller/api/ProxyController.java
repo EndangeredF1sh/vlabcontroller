@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
@@ -54,12 +55,26 @@ public class ProxyController extends BaseController {
             int containerLimit = environment.getProperty("proxy.container-quantity-limit", Integer.class, 2);
             int proxyCount = proxyService.getProxies(p -> p.getUserId().equals(userService.getCurrentUserId()) && !p.getSpec().getId().equals("filebrowser"), false).size();
             if (proxyCount >= containerLimit) {
-                return APIResponseBody.failed("Exceed the container limit");
+                return APIResponseBody.failed("container limit exceeded");
             }
         }
 
         ProxySpec spec = proxyService.resolveProxySpec(baseSpec, null, null);
         proxy = proxyService.startProxy(spec, false);
+        return APIResponseBody.success(proxy);
+    }
+
+    @PostMapping(value = "/api/proxy/{proxyId}/extension", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<APIResponseBody<Proxy>> extendExpiration(@PathVariable String proxyId, @RequestParam long extendMs) {
+        Proxy proxy = proxyService.findProxy(p -> p.getId().equals(proxyId), false);
+        if (proxy == null) return APIResponseBody.resourceNotFound();
+
+        if (extendMs < 0) return APIResponseBody.badRequest("extendMs should be a positive integer");
+
+        if (extendMs > Duration.ofHours(12).toMillis()) return APIResponseBody.badRequest("extendMs should be less than 12 hours");
+        long expiration = proxy.getExpirationTimestamp();
+        proxy.setExpirationTimestamp(expiration + extendMs);
+
         return APIResponseBody.success(proxy);
     }
 
